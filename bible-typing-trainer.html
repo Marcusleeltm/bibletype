@@ -1,0 +1,3077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Bible Typing Trainer</title>
+<meta name="theme-color" content="#0e1116">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root{
+    --bg:#0e1116; --panel:#161c24; --panel2:#1d2530; --border:#2a3442;
+    --text:#e6edf3; --muted:#8b98a8; --accent:#4ea1ff; --accent2:#7c5cff;
+    --good:#3fb950; --bad:#f85149; --warn:#d29922;
+    --fs:20px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:15px; line-height:1.5;
+  }
+  header{
+    position:sticky; top:0; z-index:50; background:rgba(14,17,22,.92);
+    backdrop-filter:blur(8px); border-bottom:1px solid var(--border);
+    padding:10px 18px; display:flex; align-items:center; gap:18px; flex-wrap:wrap;
+  }
+  h1{font-size:17px; margin:0; font-weight:700; letter-spacing:.2px; white-space:nowrap}
+  h1 span{color:var(--accent)}
+  nav{display:flex; gap:4px; flex-wrap:wrap}
+  nav button{
+    background:transparent; border:1px solid transparent; color:var(--muted);
+    padding:6px 12px; border-radius:8px; cursor:pointer; font-size:13.5px; font-weight:600;
+  }
+  nav button:hover{background:var(--panel2); color:var(--text)}
+  nav button.active{background:var(--panel2); border-color:var(--border); color:var(--text)}
+  main{max-width:1180px; margin:0 auto; padding:18px}
+  .view{display:none}
+  .view.active{display:block}
+
+  .card{
+    background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:14px 16px; margin-bottom:14px;
+  }
+  .row{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
+  .spacer{flex:1}
+  label.field{display:flex; flex-direction:column; gap:4px; font-size:11.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px}
+  select,input[type=text],input[type=number],textarea{
+    background:var(--panel2); color:var(--text); border:1px solid var(--border);
+    border-radius:8px; padding:7px 10px; font-size:14px; font-family:inherit; outline:none;
+  }
+  select:focus,input:focus,textarea:focus{border-color:var(--accent)}
+  button.btn{
+    background:var(--accent); color:#04121f; border:none; border-radius:8px;
+    padding:8px 14px; font-weight:700; font-size:13.5px; cursor:pointer;
+  }
+  button.btn:hover{filter:brightness(1.1)}
+  button.ghost{background:var(--panel2); color:var(--text); border:1px solid var(--border)}
+  button.ghost:hover{background:#25303e}
+  button.danger{background:#3a1d1d; color:#ff9c94; border:1px solid #5c2b2b}
+
+  .statsbar{display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:12px}
+  .stat{
+    background:var(--panel); border:1px solid var(--border); border-radius:10px;
+    padding:10px 8px; text-align:center;
+  }
+  .stat b{display:block; font-size:22px; font-weight:800; letter-spacing:-.5px}
+  .stat small{color:var(--muted); font-size:10.5px; text-transform:uppercase; letter-spacing:.8px}
+  .stat.wpm b{color:var(--accent)}
+  .stat.acc b{color:var(--good)}
+  .stat.err b{color:var(--bad)}
+
+  #type-panel{
+    background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:22px 26px; height:52vh; min-height:240px; overflow-y:auto; outline:none;
+    position:relative; cursor:text;
+  }
+  #type-panel:focus{border-color:#35506e}
+  #type-text{
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    font-size:var(--fs); line-height:1.95; white-space:pre-wrap; overflow-wrap:break-word;
+    letter-spacing:.2px;
+  }
+  .ch{color:#54637a; transition:color .06s linear}
+  .ch.ok{color:#c6d5e4}
+  .ch.cur{background:#243449; color:#fff; border-radius:2px; box-shadow:inset 0 -2px 0 var(--accent)}
+  .ch.bad{background:rgba(248,81,73,.45); color:#fff; border-radius:2px}
+  .hint{color:var(--muted); font-size:12.5px; margin-top:8px; text-align:center}
+  kbd{background:var(--panel2); border:1px solid var(--border); border-radius:4px; padding:1px 5px; font-size:11px}
+
+  .overlay{
+    position:absolute; inset:0; background:rgba(10,14,19,.86); backdrop-filter:blur(3px);
+    display:flex; align-items:center; justify-content:center; border-radius:12px; z-index:5;
+  }
+  .overlay.hidden{display:none}
+  .overlay-card{background:var(--panel2); border:1px solid var(--border); border-radius:14px; padding:24px 28px; text-align:center; max-width:420px}
+  .overlay-card h3{margin:0 0 10px}
+  .big{font-size:34px; font-weight:800; color:var(--accent)}
+
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+  @media(max-width:760px){ .grid2{grid-template-columns:1fr} .statsbar{grid-template-columns:repeat(3,1fr)} }
+
+  .bar{background:#0b0f14; border-radius:999px; height:10px; overflow:hidden; border:1px solid var(--border)}
+  .bar > i{display:block; height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2)); border-radius:999px; transition:width .3s}
+
+  table{width:100%; border-collapse:collapse; font-size:13.5px}
+  th{text-align:left; color:var(--muted); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.7px; padding:6px 8px; border-bottom:1px solid var(--border)}
+  td{padding:7px 8px; border-bottom:1px solid #1e2631}
+  tr:last-child td{border-bottom:none}
+  .muted{color:var(--muted)}
+  .tag{display:inline-block; background:var(--panel2); border:1px solid var(--border); border-radius:6px; padding:1px 7px; font-size:11.5px; color:var(--muted)}
+
+  /* calendar */
+  .cal{display:grid; grid-template-columns:repeat(7,1fr); gap:6px}
+  .cal .dow{text-align:center; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; padding-bottom:4px}
+  .cal .day{
+    aspect-ratio:1/1; border-radius:8px; border:1px solid #1e2631; background:#12171e;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-size:12.5px; cursor:pointer; user-select:none; position:relative;
+  }
+  .cal .day:hover{border-color:var(--accent)}
+  .cal .day.out{opacity:.22; cursor:default}
+  .cal .day .n{font-weight:700}
+  .cal .day .w{font-size:9.5px; color:#0a1017; font-weight:800}
+  .cal .day.today{outline:2px solid var(--accent); outline-offset:-2px}
+
+  .chart{width:100%; height:auto; display:block}
+  .chart .axis{stroke:#25303e; stroke-width:1}
+  .chart .line{fill:none; stroke:var(--accent); stroke-width:2; stroke-linejoin:round}
+  .chart .area{fill:rgba(78,161,255,.13)}
+  .chart text{fill:#8b98a8; font-size:10px}
+
+  .wordchip{display:inline-flex; align-items:center; gap:6px; background:var(--panel2); border:1px solid var(--border); border-radius:8px; padding:3px 9px; margin:0 5px 5px 0; font-size:13px; font-family:ui-monospace,monospace}
+  .wordchip b{color:var(--bad); font-size:11px}
+  .wordchip.ok b{color:var(--good)}
+
+  .toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(80px);
+    background:var(--panel2); border:1px solid var(--border); color:var(--text);
+    padding:10px 18px; border-radius:10px; font-size:14px; z-index:200;
+    transition:transform .25s ease, opacity .25s; opacity:0; pointer-events:none;
+  }
+  .toast.show{transform:translateX(-50%) translateY(0); opacity:1}
+  .scroll{max-height:340px; overflow:auto}
+  h2{font-size:15px; margin:0 0 12px; letter-spacing:.3px}
+  h2 small{font-weight:400; color:var(--muted); font-size:12px; margin-left:6px}
+  .kpi{display:flex; flex-direction:column; gap:2px}
+  .kpi b{font-size:24px; font-weight:800; letter-spacing:-.6px}
+  .kpi small{color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.7px}
+</style>
+
+<style>
+/* ===== v2 additions ===== */
+.hidden{display:none!important}
+.ch.skip{color:#d29922!important; opacity:.75}
+.capswarn{background:#3a2d12; border:1px solid #6b5217; color:#ffd58a; border-radius:8px; padding:6px 12px; margin-bottom:8px; font-size:13px; text-align:center}
+.cal .day{aspect-ratio:auto; min-height:88px; padding:5px 6px; align-items:stretch; justify-content:flex-start; gap:2px; overflow:hidden; font-size:12px}
+.cal .day .top{display:flex; justify-content:space-between; align-items:baseline; gap:4px}
+.cal .day .n{font-weight:700; color:var(--text)}
+.cal .day .w{font-size:10px; color:#cfe6ff; font-weight:700}
+.cal .day .cb{font-size:10px; line-height:1.3; color:#eaffee; background:rgba(63,185,80,.30); border:1px solid rgba(63,185,80,.45); border-radius:4px; padding:0 4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.cal .day .ck{color:var(--good); font-size:11px; font-weight:800}
+.cal .day.sel{outline:2px solid var(--accent2); outline-offset:-2px}
+.legend{display:flex; gap:12px; align-items:center; font-size:12px; color:var(--muted); flex-wrap:wrap}
+.legend i{display:inline-block; width:12px; height:12px; border-radius:3px; vertical-align:-2px; margin-right:4px}
+@media(max-width:600px){ .cal{gap:3px} .cal .day{min-height:64px; padding:3px} .cal .day .cb{font-size:8.5px} }
+.status{font-size:12.5px; margin-top:8px; color:var(--muted); white-space:pre-wrap}
+</style>
+
+<style>
+/* ===== v3: themes, focus, today, plans, map, heatmap, ghost ===== */
+:root{
+  --ch:#54637a; --chok:#c6d5e4; --curbg:#243449; --curtx:#fff; --barbg:#0b0f14;
+  --cell:#12171e; --line:#1e2631; --hdr:rgba(14,17,22,.92); --hover:#25303e;
+  --overlay:rgba(10,14,19,.86); --btnfg:#04121f; --w:#cfe6ff; --cbfg:#eaffee;
+  --tf:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+}
+:root[data-theme="light"]{
+  --bg:#f6f7f9; --panel:#ffffff; --panel2:#eef1f5; --border:#d7dde5; --text:#1b2430; --muted:#66758a;
+  --accent:#1f6feb; --accent2:#6d4aff; --good:#1a7f37; --bad:#cf222e; --warn:#9a6700;
+  --ch:#a3afbf; --chok:#1b2430; --curbg:#dbe8fb; --curtx:#0b1f3a; --barbg:#e6eaf0;
+  --cell:#f1f4f8; --line:#e3e8ee; --hdr:rgba(246,247,249,.92); --hover:#e2e7ee;
+  --overlay:rgba(246,247,249,.9); --btnfg:#fff; --w:#0b3d91; --cbfg:#0f3d1c;
+}
+:root[data-theme="sepia"]{
+  --bg:#f4ecd8; --panel:#fbf5e6; --panel2:#efe5cc; --border:#dccfae; --text:#3b2f1e; --muted:#8a7757;
+  --accent:#a8590f; --accent2:#7a4b9c; --good:#4d7c0f; --bad:#b42318; --warn:#a16207;
+  --ch:#b9a98a; --chok:#3b2f1e; --curbg:#ecd9ad; --curtx:#2a1f10; --barbg:#e9dcc0;
+  --cell:#f1e7cf; --line:#e4d8ba; --hdr:rgba(244,236,216,.92); --hover:#e8dbbd;
+  --overlay:rgba(244,236,216,.92); --btnfg:#fff8ea; --w:#6b3a08; --cbfg:#2f4a0a;
+}
+header{background:var(--hdr)}
+#type-text{font-family:var(--tf)}
+.ch{color:var(--ch)}
+.ch.ok{color:var(--chok)}
+.ch.cur{background:var(--curbg); color:var(--curtx)}
+.ch.bad{color:var(--curtx)}
+.bar{background:var(--barbg)}
+.cal .day{background:var(--cell); border-color:var(--line)}
+.cal .day .w{color:var(--w)}
+.cal .day .cb{color:var(--cbfg)}
+td{border-bottom-color:var(--line)}
+button.ghost:hover{background:var(--hover)}
+button.btn:not(.ghost){color:var(--btnfg)}
+.overlay{background:var(--overlay)}
+.chart .axis{stroke:var(--line)}
+:root[data-theme="light"] button.danger, :root[data-theme="sepia"] button.danger{background:#fde8e6; color:#b42318; border-color:#f4b4ae}
+
+/* header controls */
+.hctl{display:flex; gap:6px}
+.hctl button{background:transparent; border:1px solid var(--border); color:var(--muted); border-radius:8px; padding:4px 10px; cursor:pointer; font-weight:700; font-size:13px; font-family:inherit}
+.hctl button:hover{color:var(--text)}
+.hctl button.on{color:var(--accent); border-color:var(--accent)}
+
+/* focus mode */
+header, #view-type > .card, .statsbar, .hint{transition:opacity .5s ease}
+body.focusing header, body.focusing #view-type > .card, body.focusing .statsbar, body.focusing .hint{opacity:0; pointer-events:none}
+body.focusing, body.focusing #type-panel{cursor:none}
+#focus-bar{position:fixed; top:0; left:0; height:2px; width:0; background:var(--accent); z-index:80; opacity:0; transition:opacity .5s, width .2s}
+body.focusing #focus-bar{opacity:.9}
+
+/* ghost caret */
+.ch.ghost{box-shadow:inset 0 -2px 0 var(--accent2); background:color-mix(in srgb, var(--accent2) 22%, transparent)}
+.ch.cur.ghost{background:var(--curbg); box-shadow:inset 0 -2px 0 var(--accent), inset 0 -4px 0 var(--accent2)}
+
+/* today */
+.todaywrap{max-width:640px; margin:14px auto 0}
+.hero{text-align:center; padding:30px 20px 26px}
+.cbtn{display:flex; flex-direction:column; gap:2px; align-items:center; width:100%; max-width:420px; margin:14px auto 0; padding:16px 20px; font-size:18px; border-radius:14px}
+.cbtn small{font-weight:500; opacity:.85; font-size:12.5px}
+.ringrow{display:flex; gap:30px; justify-content:center; align-items:center; margin-top:28px; flex-wrap:wrap}
+.ring{position:relative; width:120px; height:120px}
+.ring svg{transform:rotate(-90deg); display:block}
+.ring .c{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center}
+.ring .c b{font-size:24px; font-weight:800; letter-spacing:-.5px}
+.ring .c small{color:var(--muted); font-size:11px}
+.plan-line{font-size:13.5px; margin:8px 0 10px}
+
+/* bible map */
+.bmap{display:grid; grid-template-columns:repeat(auto-fill,minmax(52px,1fr)); gap:6px}
+.bt{position:relative; height:46px; border:1px solid var(--line); border-radius:8px; background:var(--cell); overflow:hidden; cursor:pointer; padding:0; display:flex; align-items:center; justify-content:center; font:700 11.5px/1 inherit; font-family:inherit; color:var(--muted)}
+.bt i{position:absolute; left:0; right:0; bottom:0; background:color-mix(in srgb, var(--accent) 40%, transparent)}
+.bt span{position:relative}
+.bt:hover{border-color:var(--accent)}
+.bt.full{border-color:var(--good)}
+.bt.full i{background:color-mix(in srgb, var(--good) 50%, transparent)}
+.bt.full span{color:var(--text)}
+.bt.cur{outline:2px solid var(--accent2); outline-offset:-2px}
+
+/* year heatmap */
+.hm{display:flex; gap:3px; overflow-x:auto; padding-bottom:6px}
+.wk{display:grid; grid-template-columns:12px; grid-template-rows:14px repeat(7,12px); gap:3px; flex:none}
+.hml{display:block; width:12px; height:14px; font-size:10px; color:var(--muted); white-space:nowrap; overflow:visible}
+.hmc{display:block; width:12px; height:12px; border-radius:3px; background:var(--cell); border:1px solid var(--line); cursor:pointer}
+.hmc.l1{background:color-mix(in srgb, var(--accent) 28%, var(--cell))}
+.hmc.l2{background:color-mix(in srgb, var(--accent) 48%, var(--cell))}
+.hmc.l3{background:color-mix(in srgb, var(--accent) 72%, var(--cell))}
+.hmc.l4{background:var(--accent)}
+.hmc.td{outline:1px solid var(--text); outline-offset:1px}
+.hmc.off{visibility:hidden}
+.hmleg{display:flex; gap:4px; align-items:center; justify-content:flex-end; font-size:11px; color:var(--muted); margin-top:4px}
+.hmleg .hmc{cursor:default}
+</style>
+
+<style>
+/* ===== v4: verses, touch, backup, milestones ===== */
+.vn{color:var(--accent); font:700 .55em/1 ui-sans-serif,system-ui,sans-serif; vertical-align:super; margin:0 3px 0 1px; opacity:.85; user-select:none}
+:root[data-verses="off"] .vn{display:none}
+.ms{margin-top:12px; font-size:13px; color:var(--good); line-height:1.7}
+#mobile-input{position:fixed; left:0; bottom:0; width:1px; height:1px; opacity:0; border:0; padding:0; margin:0; font-size:16px; pointer-events:none}
+.touch-only{display:none!important}
+@media (pointer:coarse){ .touch-only{display:inline-block!important} .hint{display:none} }
+@media (max-width:600px){
+  header{position:static; padding:8px 10px; gap:6px 8px; flex-wrap:wrap}
+  header h1{order:1}
+  header .spacer{order:2}
+  header .hctl{order:3}
+  header nav{order:4; width:100%; overflow-x:auto; flex-wrap:nowrap; -webkit-overflow-scrolling:touch}
+  header nav button{white-space:nowrap; flex:none}
+  h1{font-size:15px}
+  nav button{padding:5px 8px; font-size:12.5px}
+  main{padding:10px}
+  #type-panel{padding:14px; height:38vh; min-height:200px}
+  .hctl button{padding:4px 7px}
+  .card{padding:12px}
+  .statsbar{gap:6px}
+  .stat b{font-size:18px}
+}
+</style>
+<style>
+/* ===== v5: sync ===== */
+.hctl button.sync-ok{color:var(--good); border-color:var(--good)}
+.hctl button.sync-err{color:var(--bad); border-color:var(--bad)}
+.hctl button.sync-busy{color:var(--accent); border-color:var(--accent)}
+.hctl button.sync-busy span{display:inline-block; animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#sync-card ol{margin:8px 0 12px 18px; padding:0; font-size:13.5px; line-height:1.7}
+#sync-card a{color:var(--accent)}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📖 Bible <span>Typing</span> Trainer</h1>
+  <nav id="tabs">
+    <button data-view="today" class="active">Today</button>
+    <button data-view="type">Type</button>
+    <button data-view="goals">Goals</button>
+    <button data-view="history">History</button>
+    <button data-view="calendar">Calendar</button>
+    <button data-view="analysis">Analysis</button>
+    <button data-view="library">Library</button>
+  </nav>
+  <div class="spacer"></div>
+  <div class="hctl">
+    <button id="btn-focus" title="Focus mode — hide everything while you type">◎ Focus</button>
+    <button id="btn-sync" class="hidden" title="Sync"><span>⟳</span></button>
+    <button id="btn-sound" title="Typing sounds">♪</button>
+    <button id="btn-font" title="Reading font">Aa</button>
+    <button id="btn-theme" title="Theme">◐</button>
+  </div>
+</header>
+
+<main>
+<div id="focus-bar"></div>
+
+  <!-- ============ TODAY VIEW ============ -->
+  <section id="view-today" class="view active">
+    <div class="todaywrap">
+      <div class="card hidden" id="backup-note"></div>
+      <div class="card hero">
+        <div class="muted" id="today-date" style="font-size:13px"></div>
+        <button class="btn cbtn" id="btn-continue"><span id="cont-title">Continue</span><small id="cont-sub"></small></button>
+        <div class="ringrow">
+          <div class="ring">
+            <svg width="120" height="120" viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="52" fill="none" stroke="var(--line)" stroke-width="8"/>
+              <circle id="ring-fg" cx="60" cy="60" r="52" fill="none" stroke="var(--accent)" stroke-width="8" stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7" style="transition:stroke-dashoffset .6s ease"/>
+            </svg>
+            <div class="c"><b id="ring-n">0</b><small id="ring-of">of 500 words</small></div>
+          </div>
+          <div class="row" style="gap:26px">
+            <div class="kpi"><b id="td-streak">0</b><small>Day streak</small></div>
+            <div class="kpi"><b id="td-pct">0%</b><small>Of this Bible</small></div>
+          </div>
+        </div>
+      </div>
+      <div class="card" id="plan-card"></div>
+    </div>
+  </section>
+
+  <!-- ============ TYPE VIEW ============ -->
+  <section id="view-type" class="view">
+    <div class="card">
+      <div class="row">
+        <label class="field">Version<select id="sel-version"></select></label>
+        <label class="field">Book<select id="sel-book"></select></label>
+        <label class="field">Chapter<select id="sel-chapter"></select></label>
+        <div class="spacer"></div>
+        <label class="field">Verses
+          <select id="sel-verses"><option value="1">On</option><option value="0">Off</option></select>
+        </label>
+        <label class="field">Ghost
+          <select id="sel-ghost"><option value="1">On</option><option value="0">Off</option></select>
+        </label>
+        <label class="field">Punctuation
+          <select id="sel-lenient"><option value="1">Lenient (&quot; = “ ”)</option><option value="0">Strict</option></select>
+        </label>
+        <button class="btn ghost touch-only" id="btn-skip" title="Skip this character">Skip ⇥</button>
+        <button class="btn ghost" id="btn-prev-ch" title="Previous chapter">‹ Prev</button>
+        <button class="btn ghost" id="btn-next-ch" title="Next chapter">Next ›</button>
+        <button class="btn ghost" id="btn-restart">↻ Restart</button>
+        <button class="btn ghost" id="btn-stop">⏹ Save &amp; Stop</button>
+        <label class="field">Font <input type="range" id="font-size" min="14" max="34" step="1"></label>
+      </div>
+    </div>
+
+    <div class="statsbar">
+      <div class="stat wpm"><b id="st-wpm">0</b><small>WPM</small></div>
+      <div class="stat acc"><b id="st-acc">100%</b><small>Accuracy</small></div>
+      <div class="stat"><b id="st-prog">0%</b><small>Chapter</small></div>
+      <div class="stat err"><b id="st-err">0</b><small>Errors</small></div>
+      <div class="stat"><b id="st-time">0:00</b><small>Time</small></div>
+    </div>
+
+    <div id="caps-warn" class="capswarn hidden">⚠ Caps Lock is on</div>
+    <div id="type-panel" tabindex="0">
+      <div id="type-text" class="muted">Loading…</div>
+      <div id="done-overlay" class="overlay hidden">
+        <div class="overlay-card">
+          <h3>Chapter complete! 🎉</h3>
+          <div id="done-stats" class="muted" style="margin-bottom:16px"></div>
+          <button class="btn" id="btn-next">Next chapter → <kbd>Enter</kbd></button>
+          <button class="btn ghost" id="btn-again">Repeat</button>
+        </div>
+      </div>
+    </div>
+    <div class="hint"><span id="ghost-info" style="display:block; margin-bottom:4px"></span>
+      Click the text and start typing. Wrong keys flash red and don't advance — fix and continue.
+      <kbd>Backspace</kbd> goes back. <kbd>Tab</kbd> skips a character you can't type. Curly quotes/dashes accept the plain keys (<kbd>"</kbd> <kbd>'</kbd> <kbd>-</kbd>) in Lenient mode.
+    </div>
+  </section>
+
+  <!-- ============ GOALS VIEW ============ -->
+  <section id="view-goals" class="view">
+    <div class="card">
+      <h2>Overall Progress <small id="goals-ver"></small></h2>
+      <div class="bar" style="height:16px"><i id="goals-bar" style="width:0%"></i></div>
+      <div class="row" style="margin-top:14px; gap:26px">
+        <div class="kpi"><b id="goals-ch">0 / 0</b><small>Chapters</small></div>
+        <div class="kpi"><b id="goals-pct">0%</b><small>Complete</small></div>
+        <div class="kpi"><b id="goals-words">0</b><small>Words typed</small></div>
+        <div class="kpi"><b id="goals-remain">–</b><small>Est. hours left</small></div>
+        <div class="kpi"><b id="goals-eta">–</b><small>Finish by</small></div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h2>Daily Goal</h2>
+        <div class="row" style="margin-bottom:12px">
+          <label class="field">Words / day
+            <input type="number" id="daily-goal" min="50" max="10000" step="50" style="width:120px">
+          </label>
+          <div class="spacer"></div>
+          <div class="kpi" style="text-align:right"><b id="today-words">0</b><small>Today</small></div>
+        </div>
+        <div class="bar"><i id="today-bar" style="width:0%"></i></div>
+        <div class="row" style="margin-top:14px; gap:26px">
+          <div class="kpi"><b id="streak">0</b><small>Day streak</small></div>
+          <div class="kpi"><b id="avg-wpm">0</b><small>Avg WPM</small></div>
+          <div class="kpi"><b id="best-wpm">0</b><small>Best WPM</small></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>WPM Trend <small>last 40 sessions</small></h2>
+        <div id="goals-chart"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Bible Map <small>tap a book to jump in</small></h2>
+      <div id="goals-books" class="scroll"></div>
+    </div>
+  </section>
+
+  <!-- ============ HISTORY VIEW ============ -->
+  <section id="view-history" class="view">
+    <div class="card">
+      <div class="row">
+        <h2 style="margin:0">Session History</h2>
+        <div class="spacer"></div>
+        <button class="btn ghost danger" id="btn-clear-history">Clear history</button>
+      </div>
+    </div>
+    <div class="card">
+      <div id="history-table" class="scroll"></div>
+    </div>
+  </section>
+
+  <!-- ============ CALENDAR VIEW ============ -->
+  <section id="view-calendar" class="view">
+    <div class="card">
+      <h2>Last 12 months <small id="hm-sub"></small></h2>
+      <div id="hm" class="hm"></div>
+      <div class="hmleg">Less <i class="hmc"></i><i class="hmc l1"></i><i class="hmc l2"></i><i class="hmc l3"></i><i class="hmc l4"></i> More <span style="margin-left:6px">(full colour = daily goal reached)</span></div>
+    </div>
+    <div class="card">
+      <div class="row" style="margin-bottom:14px">
+        <button class="btn ghost" id="cal-prev">‹</button>
+        <h2 style="margin:0; min-width:190px; text-align:center" id="cal-title">—</h2>
+        <button class="btn ghost" id="cal-next">›</button>
+        <div class="spacer"></div>
+        <button class="btn ghost" id="cal-today">Today</button>
+        <span class="legend"><span><i style="background:rgba(78,161,255,.5)"></i>words typed</span><span><i style="background:rgba(63,185,80,.5)"></i>chapters completed</span></span>
+      </div>
+      <div id="cal-month-summary" style="margin-bottom:14px"></div>
+      <div class="cal" id="cal-grid"></div>
+    </div>
+    <div class="card">
+      <h2 id="cal-day-title">Select a day</h2>
+      <div id="cal-day-detail" class="muted">Click a day to see sessions.</div>
+    </div>
+  </section>
+
+  <!-- ============ ANALYSIS VIEW ============ -->
+  <section id="view-analysis" class="view">
+    <div class="card">
+      <div class="row" style="gap:30px">
+        <div class="kpi"><b id="an-words">0</b><small>Total words typed</small></div>
+        <div class="kpi"><b id="an-unique">0</b><small>Unique words</small></div>
+        <div class="kpi"><b id="an-chars">0</b><small>Characters typed</small></div>
+        <div class="kpi"><b id="an-bible">0</b><small>Bible words remaining</small></div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h2>Most Mistyped Words</h2>
+        <div id="an-mistyped" class="scroll"><span class="muted">No errors recorded yet.</span></div>
+      </div>
+      <div class="card">
+        <h2>Most Confused Keys <small>expected → pressed</small></h2>
+        <div id="an-confusion" class="scroll"><span class="muted">No errors recorded yet.</span></div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h2>Most Typed Words</h2>
+        <div id="an-typed" class="scroll"><span class="muted">Start typing to build this.</span></div>
+      </div>
+      <div class="card">
+        <h2>Character Error Heat</h2>
+        <div id="an-chars2" class="scroll"><span class="muted">No errors recorded yet.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ LIBRARY VIEW ============ -->
+  <section id="view-library" class="view">
+    <div class="card" id="sync-card">
+      <h2>Sync across devices <small>private GitHub gist</small></h2>
+      <div id="sync-body"></div>
+    </div>
+
+    <div class="card">
+      <h2>Installed Versions</h2>
+      <div id="lib-list"></div>
+    </div>
+
+    <div class="card">
+      <h2>Import a Bible Version</h2>
+      <div class="row" style="margin-bottom:12px">
+        <label class="field" style="flex:1; min-width:260px">Load from URL (raw JSON)
+          <input type="text" id="imp-url" placeholder="https://raw.githubusercontent.com/…/file.json">
+        </label>
+        <button class="btn" id="imp-url-go" style="align-self:flex-end">Download &amp; import</button>
+        <button class="btn ghost" id="imp-bsb" style="align-self:flex-end">⚡ Berean Standard Bible</button>
+      </div>
+      <div id="imp-status" class="status" style="margin:-4px 0 12px"></div>
+      <div class="row" style="margin-bottom:10px">
+        <label class="field" style="flex:1; min-width:220px">Version name
+          <input type="text" id="imp-name" placeholder="e.g. KJV, WEB, ASV…">
+        </label>
+        <label class="field">Load from file
+          <input type="file" id="imp-file" accept=".json,.txt,.md" style="font-size:12px">
+        </label>
+      </div>
+      <label class="field">Paste text or JSON
+        <textarea id="imp-text" rows="9" placeholder='JSON:  {"name":"KJV","books":[{"name":"Genesis","chapters":["In the beginning…","Thus the heavens…"]}]}
+
+BSB-style JSON (book → chapter → verse):
+{"Genesis":{"1":{"1":"In the beginning…","2":"…"},"2":{"1":"…"}}}
+
+Plain text:
+# Genesis 1
+In the beginning God created the heaven and the earth.
+
+# Genesis 2
+Thus the heavens and the earth were finished…' style="font-family:ui-monospace,monospace;font-size:12.5px"></textarea>
+      </label>
+      <div class="row" style="margin-top:10px">
+        <button class="btn" id="imp-go">Import version</button>
+        <button class="btn ghost" id="imp-sample">Reload built-in sample</button>
+        <div class="spacer"></div>
+        <span class="muted" id="backup-info" style="font-size:12px"></span>
+        <button class="btn ghost" id="btn-export">⬇ Export all data</button>
+        <button class="btn ghost" id="btn-restore">⬆ Restore backup</button><button class="btn ghost hidden" id="btn-install">⤓ Install app</button><input type="file" id="restore-file" accept=".json" hidden>
+        <button class="btn ghost danger" id="btn-wipe">Erase everything</button>
+      </div>
+      <p class="muted" style="font-size:12.5px; margin-bottom:0">
+        Supported: JSON with a <code>books</code> array (chapters as strings, arrays of verses, or <code>{n,text}</code> objects),
+        BSB-style nested objects (book → chapter → verse), or plain text where each chapter starts with a header line
+        like <code># Genesis 1</code>. Full KJV / WEB / ASV / BSB text files are public domain and easy to find.
+      </p>
+    </div>
+  </section>
+
+</main>
+
+<input id="mobile-input" type="text" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" aria-label="Typing input">
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   Bible Typing Trainer — single file app
+   ========================================================= */
+
+/* ---------------- tiny helpers ---------------- */
+const $  = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const clamp = (n,a,b)=>Math.max(a,Math.min(b,n));
+const pad2 = n => String(n).padStart(2,'0');
+const dayKey = (d=new Date()) => `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+const fmtTime = s => `${Math.floor(s/60)}:${pad2(Math.floor(s%60))}`;
+const fmtNum = n => n.toLocaleString();
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+let toastTimer;
+function toast(msg){
+  const t = $('#toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+/* ---------------- IndexedDB (stores big bible text) ---------------- */
+let _dbp = null;
+function idb(){
+  if(_dbp) return _dbp;
+  _dbp = new Promise((res, rej)=>{
+    const rq = indexedDB.open('bible-typing', 1);
+    rq.onupgradeneeded = () => { rq.result.createObjectStore('bibles'); };
+    rq.onsuccess = () => res(rq.result);
+    rq.onerror = () => rej(rq.error);
+  });
+  return _dbp;
+}
+async function idbSet(key, val){
+  const db = await idb();
+  return new Promise((res,rej)=>{
+    const tx = db.transaction('bibles','readwrite');
+    tx.objectStore('bibles').put(val, key);
+    tx.oncomplete = ()=>res(); tx.onerror = ()=>rej(tx.error);
+  });
+}
+async function idbGet(key){
+  const db = await idb();
+  return new Promise((res,rej)=>{
+    const tx = db.transaction('bibles','readonly');
+    const rq = tx.objectStore('bibles').get(key);
+    rq.onsuccess = ()=>res(rq.result); rq.onerror = ()=>rej(rq.error);
+  });
+}
+async function idbDel(key){
+  const db = await idb();
+  return new Promise((res,rej)=>{
+    const tx = db.transaction('bibles','readwrite');
+    tx.objectStore('bibles').delete(key);
+    tx.oncomplete = ()=>res(); tx.onerror = ()=>rej(tx.error);
+  });
+}
+
+/* ---------------- persistent app state ---------------- */
+const STORE_KEY = 'btt.state.v1';
+
+function defaultDB(){
+  return {
+    versions: [],     // {id,name,books,chapters,words,chars,builtin}
+    activeId: null,
+    progress: {},     // "vid::book::chap" -> {done,bestWpm,words,ts}
+    sessions: [],     // {ts,vid,b,c,wpm,acc,chars,words,secs}
+    stats: {
+      wordTyped: {},  // word -> count
+      wordErr:   {},  // word -> error count
+      charErr:   {},  // expected char -> count
+      confusion: {},  // "e>r" -> count
+      charsTyped: 0,
+      wordsTyped: 0,
+      msTyped: 0
+    },
+    settings: { dailyWords: 500, fontSize: 20, lenient: true, theme: 'dark', font: 'mono', focus: true, ghost: true, sound: false, verses: true },
+    canon: {},        // shared completion: 'book::chapter' -> {done,bestWpm,words,ts}
+    canonSeeded: false,
+    createdAt: Date.now(), lastBackup: 0, backupSnooze: 0,
+    milestones: {},
+    partialTs: {}, planTs: 0, historyClearedAt: 0,
+    plan: null,       // {id, start:'YYYY-MM-DD'}
+    partial: {},      // progKey -> char index (resume mid-chapter)
+    completions: [],  // {ts,vid,b,c,book,chap,wpm,acc,words}
+    seeded: false,
+    cur: { b:0, c:0 },
+    calMonth: null,
+    selectedDay: null
+  };
+}
+
+let DB = defaultDB();
+let saveTimer = null;
+let _saveCount = 0;
+
+function loadDB(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(raw){
+      const p = JSON.parse(raw);
+      DB = Object.assign(defaultDB(), p);
+      DB.stats = Object.assign(defaultDB().stats, p.stats||{});
+      DB.settings = Object.assign(defaultDB().settings, p.settings||{});
+    }
+  }catch(e){ console.warn('load failed', e); }
+}
+
+function saveDB(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(flushDB, 250);
+}
+
+function flushDB(){
+  try{
+    // Prune occasionally so a full KJV import doesn't bloat localStorage.
+    if(++_saveCount % 20 === 0) pruneStats();
+    localStorage.setItem(STORE_KEY, JSON.stringify(DB));
+  }
+  catch(e){ console.warn('save failed', e); }
+}
+
+/* Keep the analytics maps from growing without bound. */
+function pruneStats(){
+  const cap = (obj, n) => {
+    const keys = Object.keys(obj);
+    if(keys.length <= n) return;
+    keys.sort((a,b)=>obj[b]-obj[a]);
+    for(let i=n; i<keys.length; i++) delete obj[keys[i]];
+  };
+  cap(DB.stats.wordTyped, 5000);
+  cap(DB.stats.wordErr,   5000);
+  cap(DB.stats.confusion, 2000);
+  cap(DB.stats.charErr,    200);
+}
+
+window.addEventListener('beforeunload', ()=>{ try{ savePartial(); }catch(e){} flushDB(); });
+document.addEventListener('visibilitychange', () => { if(document.hidden) flushDB(); });
+
+/* ---------------- built-in sample (KJV, public domain) ---------------- */
+const T = s => s.replace(/\s+/g,' ').trim();
+/* One verse per line -> {text, vs:[[verseNo, offset],...]} (used by the built-in sample) */
+const V = s => {
+  const lines = s.split('\n').map(x=>T(x)).filter(Boolean);
+  const vs = []; let text = '';
+  lines.forEach((l,i)=>{ if(text) text += ' '; vs.push([i+1, text.length]); text += l; });
+  return { text, vs };
+};
+/* Build a chapter from [[verseNo, text], ...] while recording where each verse starts. */
+function mkChapter(n, verses){
+  let text = ''; const vs = [];
+  for(const [vn, t0] of verses){
+    const t = T(t0 || ''); if(!t) continue;
+    if(text) text += ' ';
+    vs.push([vn, text.length]); text += t;
+  }
+  return { n, text, vs };
+}
+
+const SAMPLE = {
+  name: 'KJV (Sample)',
+  books: [
+    { name:'Genesis', chapters:[
+      { n:1, ...V(`
+In the beginning God created the heaven and the earth.
+And the earth was without form, and void; and darkness was upon the face of the deep. And the Spirit of God moved upon the face of the waters.
+And God said, Let there be light: and there was light.
+And God saw the light, that it was good: and God divided the light from the darkness.
+And God called the light Day, and the darkness he called Night. And the evening and the morning were the first day.
+And God said, Let there be a firmament in the midst of the waters, and let it divide the waters from the waters.
+And God made the firmament, and divided the waters which were under the firmament from the waters which were above the firmament: and it was so.
+And God called the firmament Heaven. And the evening and the morning were the second day.
+And God said, Let the waters under the heaven be gathered together unto one place, and let the dry land appear: and it was so.
+And God called the dry land Earth; and the gathering together of the waters called he Seas: and God saw that it was good.
+And God said, Let the earth bring forth grass, the herb yielding seed, and the fruit tree yielding fruit after his kind, whose seed is in itself, upon the earth: and it was so.
+And the earth brought forth grass, and herb yielding seed after his kind, and the tree yielding fruit, whose seed was in itself, after his kind: and God saw that it was good.
+And the evening and the morning were the third day.
+And God said, Let there be lights in the firmament of the heaven to divide the day from the night; and let them be for signs, and for seasons, and for days, and years:
+And let them be for lights in the firmament of the heaven to give light upon the earth: and it was so.
+And God made two great lights; the greater light to rule the day, and the lesser light to rule the night: he made the stars also.
+And God set them in the firmament of the heaven to give light upon the earth,
+And to rule over the day and over the night, and to divide the light from the darkness: and God saw that it was good.
+And the evening and the morning were the fourth day.
+And God said, Let the waters bring forth abundantly the moving creature that hath life, and fowl that may fly above the earth in the open firmament of heaven.
+And God created great whales, and every living creature that moveth, which the waters brought forth abundantly, after their kind, and every winged fowl after his kind: and God saw that it was good.
+And God blessed them, saying, Be fruitful, and multiply, and fill the waters in the seas, and let fowl multiply in the earth.
+And the evening and the morning were the fifth day.
+And God said, Let the earth bring forth the living creature after his kind, cattle, and creeping thing, and beast of the earth after his kind: and it was so.
+And God made the beast of the earth after his kind, and cattle after their kind, and every thing that creepeth upon the earth after his kind: and God saw that it was good.
+And God said, Let us make man in our image, after our likeness: and let them have dominion over the fish of the sea, and over the fowl of the air, and over the cattle, and over all the earth, and over every creeping thing that creepeth upon the earth.
+So God created man in his own image, in the image of God created he him; male and female created he them.
+And God blessed them, and God said unto them, Be fruitful, and multiply, and replenish the earth, and subdue it: and have dominion over the fish of the sea, and over the fowl of the air, and over every living thing that moveth upon the earth.
+And God said, Behold, I have given you every herb bearing seed, which is upon the face of all the earth, and every tree, in the which is the fruit of a tree yielding seed; to you it shall be for meat.
+And to every beast of the earth, and to every fowl of the air, and to every thing that creepeth upon the earth, wherein there is life, I have given every green herb for meat: and it was so.
+And God saw every thing that he had made, and, behold, it was very good. And the evening and the morning were the sixth day.
+`) }
+    ]},
+    { name:'Psalms', chapters:[
+      { n:1, ...V(`
+Blessed is the man that walketh not in the counsel of the ungodly, nor standeth in the way of sinners, nor sitteth in the seat of the scornful.
+But his delight is in the law of the LORD; and in his law doth he meditate day and night.
+And he shall be like a tree planted by the rivers of water, that bringeth forth his fruit in his season; his leaf also shall not wither; and whatsoever he doeth shall prosper.
+The ungodly are not so: but are like the chaff which the wind driveth away.
+Therefore the ungodly shall not stand in the judgment, nor sinners in the congregation of the righteous.
+For the LORD knoweth the way of the righteous: but the way of the ungodly shall perish.
+`) },
+      { n:23, ...V(`
+The LORD is my shepherd; I shall not want.
+He maketh me to lie down in green pastures: he leadeth me beside the still waters.
+He restoreth my soul: he leadeth me in the paths of righteousness for his name's sake.
+Yea, though I walk through the valley of the shadow of death, I will fear no evil: for thou art with me; thy rod and thy staff they comfort me.
+Thou preparest a table before me in the presence of mine enemies: thou anointest my head with oil; my cup runneth over.
+Surely goodness and mercy shall follow me all the days of my life: and I will dwell in the house of the LORD for ever.
+`) },
+      { n:100, ...V(`
+Make a joyful noise unto the LORD, all ye lands.
+Serve the LORD with gladness: come before his presence with singing.
+Know ye that the LORD he is God: it is he that hath made us, and not we ourselves; we are his people, and the sheep of his pasture.
+Enter into his gates with thanksgiving, and into his courts with praise: be thankful unto him, and bless his name.
+For the LORD is good; his mercy is everlasting; and his truth endureth to all generations.
+`) }
+    ]},
+    { name:'John', chapters:[
+      { n:1, ...V(`
+In the beginning was the Word, and the Word was with God, and the Word was God.
+The same was in the beginning with God.
+All things were made by him; and without him was not any thing made that was made.
+In him was life; and the life was the light of men.
+And the light shineth in darkness; and the darkness comprehended it not.
+There was a man sent from God, whose name was John.
+The same came for a witness, to bear witness of the Light, that all men through him might believe.
+He was not that Light, but was sent to bear witness of that Light.
+That was the true Light, which lighteth every man that cometh into the world.
+He was in the world, and the world was made by him, and the world knew him not.
+He came unto his own, and his own received him not.
+But as many as received him, to them gave he power to become the sons of God, even to them that believe on his name:
+Which were born, not of blood, nor of the will of the flesh, nor of the will of man, but of God.
+And the Word was made flesh, and dwelt among us, and we beheld his glory, the glory as of the only begotten of the Father, full of grace and truth.
+`) }
+    ]}
+  ]
+};
+
+/* ---------------- version management ---------------- */
+const BIBLE_CACHE = {};
+let ACTIVE = null;
+
+function countWords(str){ let n=0; const re=/\S+/g; while(re.exec(str)) n++; return n; }
+
+async function addVersion(v, opts={}){
+  // normalise
+  const books = v.books.map(b=>({
+    name: b.name,
+    chapters: b.chapters.map(c=>{
+      if(typeof c === 'string') return { n: 1, text: T(c) };
+      return { n: c.n ?? 1, text: T(c.text || ''), vs: Array.isArray(c.vs) && c.vs.length ? c.vs : undefined };
+    }).filter(c=>c.text.length)
+  })).filter(b=>b.chapters.length);
+
+  if(!books.length) throw new Error('No readable chapters found.');
+
+  let chapters=0, words=0, chars=0;
+  books.forEach(b=>b.chapters.forEach(c=>{ chapters++; chars+=c.text.length; words+=countWords(c.text); }));
+
+  const id = 'v' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+  const stored = { id, name: v.name || 'Untitled', books };
+  const meta = { id, name: stored.name, books: books.length, chapters, words, chars, builtin: !!opts.builtin,
+                 verses: books.some(b=>b.chapters.some(c=>c.vs && c.vs.length)) };
+
+  await idbSet('bible:'+id, stored);
+  BIBLE_CACHE[id] = stored;
+  DB.versions = DB.versions.filter(x=>x.id!==id).concat(meta);
+  flushDB();
+  return meta;
+}
+
+async function loadBible(id){
+  if(BIBLE_CACHE[id]) return BIBLE_CACHE[id];
+  const b = await idbGet('bible:'+id);
+  if(b) BIBLE_CACHE[id] = b;
+  return b || null;
+}
+
+async function deleteVersion(id){
+  const isLast = DB.versions.length === 1 && DB.versions[0].id === id;
+  const msg = isLast
+    ? 'Delete this version? It is the LAST one — the built-in sample will be reloaded so the app stays usable.'
+    : 'Delete this version and its progress?';
+  if(!confirm(msg)) return;
+
+  delete BIBLE_CACHE[id];
+  await idbDel('bible:'+id).catch(()=>{});
+  DB.versions = DB.versions.filter(v=>v.id!==id);
+  Object.keys(DB.progress).forEach(k=>{ if(k.startsWith(id+'::')) delete DB.progress[k]; });
+  Object.keys(DB.partial).forEach(k=>{ if(k.startsWith(id+'::')) delete DB.partial[k]; });
+  DB.completions = DB.completions.filter(c=>c.vid!==id);
+  if(DB.activeId === id) DB.activeId = DB.versions[0]?.id || null;
+  flushDB();
+
+  // Never leave the app empty — auto-seed the built-in sample.
+  if(!DB.versions.length){
+    try{
+      const meta = await addVersion({ name: SAMPLE.name, books: SAMPLE.books }, {builtin:true});
+      DB.activeId = meta.id;
+      flushDB();
+    }catch(e){ console.warn(e); }
+  }
+
+  await setActiveVersion(DB.activeId);
+  renderAll();
+  toast(isLast ? 'Deleted — built-in sample reloaded' : 'Version deleted');
+}
+
+async function setActiveVersion(id){
+  if(!id){ ACTIVE = null; DB.activeId = null; flushDB(); renderAll(); return; }
+  const b = await loadBible(id);
+  if(!b){ ACTIVE = null; return; }
+  ACTIVE = b;
+  DB.activeId = id;
+  const book = b.books[clamp(DB.cur.b, 0, b.books.length-1)];
+  DB.cur.b = clamp(DB.cur.b, 0, b.books.length-1);
+  DB.cur.c = clamp(DB.cur.c, 0, book.chapters.length-1);
+  flushDB();
+  resetTyping();
+  renderTypeSelectors();
+}
+
+/* ---------------- import parsing (plain text) ---------------- */
+function matchHeader(line){
+  let m = line.match(/^\s*#{1,6}\s*(.+?)\s+(\d+)\s*$/);
+  if(m) return { book:m[1].trim(), chapter:+m[2] };
+  m = line.match(/^\s*={2,}\s*(.+?)\s+(\d+)\s*=*\s*$/);
+  if(m) return { book:m[1].trim(), chapter:+m[2] };
+  const t = line.trim();
+  if(t.length>0 && t.length<=42 && /^[0-9]?\s*[A-Z]/.test(t) && !/[.,;:!?"'()]/.test(t)){
+    m = t.match(/^(\d?\s*[A-Za-z][A-Za-z]*(?:\s+[A-Za-z]+){0,3})\s+(\d{1,3})$/);
+    if(m) return { book:m[1].trim(), chapter:+m[2] };
+  }
+  return null;
+}
+
+function parseTextImport(raw){
+  const lines = raw.split(/\r?\n/);
+  const books = [];
+  let curBook=null, curNum=null, buf=[];
+
+  const getBook = name => {
+    let b = books.find(x=>x.name.toLowerCase()===name.toLowerCase());
+    if(!b){ b = { name, chapters:[] }; books.push(b); }
+    return b;
+  };
+  const flush = ()=>{
+    if(curBook && curNum!==null && buf.length){
+      const text = T(buf.join(' '));
+      if(text) curBook.chapters.push({ n: curNum, text });
+    }
+    buf = [];
+  };
+
+  for(const line of lines){
+    const h = matchHeader(line);
+    if(h){ flush(); curBook = getBook(h.book); curNum = h.chapter; continue; }
+    if(line.trim()) buf.push(line.trim());
+  }
+  flush();
+  return books.filter(b=>b.chapters.length);
+}
+
+/* ---------------- import parsing (JSON) ---------------- */
+
+/* Pull text out of one verse — string, number, or object. */
+function verseText(v){
+  if(typeof v === 'string') return v;
+  if(typeof v === 'number') return String(v);
+  if(v && typeof v === 'object'){
+    for(const k of ['text','t','verse','content','value','v','word','w']){
+      if(typeof v[k] === 'string') return v[k];
+      if(Array.isArray(v[k])) return v[k].map(verseText).filter(Boolean).join(' ');
+    }
+    if(Array.isArray(v.verses)) return v.verses.map(verseText).filter(Boolean).join(' ');
+  }
+  return '';
+}
+
+function joinVerses(arr){
+  if(!Array.isArray(arr)) return '';
+  return arr.map(verseText).filter(Boolean).join(' ');
+}
+
+/* Flatten a single chapter (string | array | object) to plain text. */
+function chapterText(c){
+  if(typeof c === 'string') return c;
+  if(Array.isArray(c)) return joinVerses(c);
+  if(c && typeof c === 'object'){
+    if(typeof c.text === 'string') return c.text;
+    if(Array.isArray(c.text)) return joinVerses(c.text);
+    if(Array.isArray(c.verses)) return joinVerses(c.verses);
+    if(Array.isArray(c.verse)) return joinVerses(c.verse);
+    if(typeof c.content === 'string') return c.content;
+    if(typeof c.value === 'string') return c.value;
+    const numeric = Object.keys(c).filter(k => /^\d+$/.test(k));
+    if(numeric.length > 1){
+      return numeric.sort((a,b)=>+a-+b).map(k=>verseText(c[k])).filter(Boolean).join(' ');
+    }
+  }
+  return '';
+}
+
+function chapterNumber(c, fallback){
+  if(c && typeof c === 'object'){
+    const n = c.n ?? c.chapter ?? c.num ?? c.number ?? c.ch ?? c.id;
+    if(n != null && !isNaN(+n)) return +n;
+  }
+  return fallback;
+}
+
+/* [[verseNo, text], ...] for one chapter, or null when it isn't verse-structured. */
+function chapterVerses(c){
+  const numOf = v => {
+    if(v && typeof v === 'object'){
+      const n = v.verse ?? v.v ?? v.n ?? v.number;
+      if(n != null && n !== '' && !isNaN(+n)) return +n;
+    }
+    return null;
+  };
+  let arr = null;
+  if(Array.isArray(c)) arr = c;
+  else if(c && typeof c === 'object'){
+    if(Array.isArray(c.verses)) arr = c.verses;
+    else if(Array.isArray(c.verse)) arr = c.verse;
+    else if(Array.isArray(c.text)) arr = c.text;
+    else if(typeof c.text !== 'string'){
+      const keys = Object.keys(c).filter(k => /^\d+$/.test(k));
+      if(keys.length > 1) return keys.sort((a,b)=>+a-+b).map(k => [+k, verseText(c[k])]);
+    }
+  }
+  return arr ? arr.map((v,i)=>[numOf(v) ?? (i+1), verseText(v)]) : null;
+}
+function chapterToObj(c, n){
+  const vv = chapterVerses(c);
+  return vv && vv.length ? mkChapter(n, vv) : { n, text: T(chapterText(c)) };
+}
+
+/* Pull a chapter list out of one book object, whatever its shape. */
+function bookChapters(b){
+  const raw = (b && (b.chapters || b.chapter || b.content)) || [];
+  if(Array.isArray(raw)){
+    return raw
+      .map((c, i) => chapterToObj(c, chapterNumber(c, i + 1)))
+      .filter(c => c.text);
+  }
+  if(raw && typeof raw === 'object'){
+    const keys = Object.keys(raw).filter(k => /^\d+$/.test(k));
+    if(keys.length){
+      return keys.sort((a,b)=>+a-+b)
+        .map(k => chapterToObj(raw[k], +k))
+        .filter(c => c.text);
+    }
+    const one = chapterText(raw);
+    if(one) return [{ n: chapterNumber(raw, 1), text: T(one) }];
+  }
+  return [];
+}
+
+/* Core JSON → {name, books} converter. */
+/* Flat list of verses: [{book,chapter,verse,text}, ...] */
+function flatVerses(arr){
+  if(!Array.isArray(arr) || !arr.length) return [];
+  const f = arr[0]; if(!f || typeof f !== 'object') return [];
+  const get = (o,keys)=>{ for(const k of keys) if(o[k] != null) return o[k]; return null; };
+  const BK=['book','book_name','bookName','bookname','name'], CH=['chapter','chapter_number','chapterNum','c'],
+        VS=['verse','verse_number','verseNum','v'], TX=['text','content','t','verse_text'];
+  if(get(f,BK)==null || get(f,CH)==null || get(f,VS)==null) return [];
+  if(isNaN(+get(f,CH)) || isNaN(+get(f,VS)) || typeof get(f,TX) !== 'string') return [];
+  const books = new Map();
+  for(const o of arr){
+    const t = get(o,TX); if(typeof t !== 'string') continue;
+    const b = String(get(o,BK)), c = +get(o,CH), v = +get(o,VS);
+    if(!books.has(b)) books.set(b, new Map());
+    const cm = books.get(b);
+    if(!cm.has(c)) cm.set(c, []);
+    cm.get(c).push([v,t]);
+  }
+  return [...books].map(([name,cm])=>({
+    name,
+    chapters: [...cm].sort((a,b)=>a[0]-b[0]).map(([n,vs])=>mkChapter(n, vs.sort((a,b)=>a[0]-b[0]))).filter(c=>c.text)
+  })).filter(b=>b.chapters.length);
+}
+
+function parseJSONImport(obj){
+  const flat = flatVerses(Array.isArray(obj) ? obj : (obj && Array.isArray(obj.verses) ? obj.verses : null));
+  if(flat.length) return flat;
+  let rawBooks = [];
+
+  if(Array.isArray(obj)){
+    rawBooks = obj;
+  } else if(obj && typeof obj === 'object'){
+
+    /* 1. Already a books array */
+    if(Array.isArray(obj.books))              rawBooks = obj.books;
+    else if(Array.isArray(obj.data?.books))   rawBooks = obj.data.books;
+    else if(Array.isArray(obj.bible?.books))  rawBooks = obj.bible.books;
+    else if(Array.isArray(obj.bible))         rawBooks = obj.bible;
+
+    /* 2. Single book at the root */
+    else if(Array.isArray(obj.chapters) || (obj.chapters && typeof obj.chapters === 'object')){
+      rawBooks = [obj];
+    }
+
+    /* 3. BSB-style nested object:  { "Genesis": { "1": { "1": "..." } } } */
+    else {
+      const keys = Object.keys(obj);
+      const firstVal = keys.length ? obj[keys[0]] : null;
+
+      const isNestedBook = firstVal &&
+        typeof firstVal === 'object' && !Array.isArray(firstVal) &&
+        Object.keys(firstVal).length > 0 &&
+        Object.keys(firstVal).every(k => /^\d+$/.test(k));
+
+      if(isNestedBook){
+        rawBooks = keys.map(bookName => {
+          const chapObj = obj[bookName];
+          const chapters = Object.keys(chapObj)
+            .filter(k => /^\d+$/.test(k))
+            .sort((a,b)=>+a-+b)
+            .map(chapNum => {
+              const versesObj = chapObj[chapNum];
+              if(versesObj && typeof versesObj === 'object' && !Array.isArray(versesObj)){
+                const vKeys = Object.keys(versesObj).filter(k => /^\d+$/.test(k));
+                if(vKeys.length){
+                  return mkChapter(+chapNum, vKeys.sort((a,b)=>+a-+b).map(vk => [+vk, verseText(versesObj[vk])]));
+                }
+              }
+              return { n: +chapNum, text: chapterText(versesObj) };
+            })
+            .filter(c => c.text);
+          return { name: bookName, chapters };
+        }).filter(b => b.chapters.length);
+
+        return rawBooks; // already normalised
+      }
+
+      /* 4. Object keyed by book names with a `.chapters` property */
+      const looksLikeBooks = keys.length > 0 && keys.every(k => {
+        const v = obj[k];
+        return v && typeof v === 'object' &&
+               (Array.isArray(v.chapters) || (v.chapters && typeof v.chapters === 'object'));
+      });
+      if(looksLikeBooks){
+        rawBooks = keys.map(k => ({
+          name: obj[k].name || obj[k].book || obj[k].title || k,
+          chapters: obj[k].chapters
+        }));
+      }
+    }
+  }
+
+  /* Normalise every entry through bookChapters() */
+  return rawBooks.map((b, bi) => {
+    if(Array.isArray(b)){
+      return { name: `Book ${bi + 1}`, chapters: bookChapters({ chapters: b }) };
+    }
+    if(!b || typeof b !== 'object') return null;
+    const name = b.name || b.book || b.title || b.abbrev || b.abbreviation || `Book ${bi + 1}`;
+    return { name, chapters: bookChapters(b) };
+  }).filter(b => b && b.chapters.length);
+}
+
+/* Public entry point used by the Import button. */
+function parseImport(raw){
+  const s = String(raw).replace(/^\uFEFF/, '').trim();
+
+  if(s.startsWith('{') || s.startsWith('[')){
+    let obj;
+    try{
+      obj = JSON.parse(s);
+    }catch(e){
+      const m = /position (\d+)/i.exec(e.message);
+      let hint = '';
+      if(m){
+        const pos = Math.min(+m[1], s.length);
+        hint = `\nNear: …${s.slice(Math.max(0,pos-25), pos)}▶${s.slice(pos, pos+25)}…`;
+      }
+      throw new Error('Invalid JSON: ' + e.message + hint);
+    }
+
+    const books = parseJSONImport(obj);
+    if(!books.length){
+      const topInfo = Array.isArray(obj)
+        ? `array with ${obj.length} item${obj.length===1?'':'s'}`
+        : `object with keys: ${Object.keys(obj).slice(0,10).join(', ')}`;
+      throw new Error(`Parsed JSON but found no readable chapters. Top level: ${topInfo}.`);
+    }
+
+    const name = (obj && !Array.isArray(obj) &&
+                  (obj.name || obj.translation || obj.title || obj.version)) || null;
+    return { name, books };
+  }
+
+  const books = parseTextImport(s);
+  if(!books.length){
+    throw new Error('No chapter headers found. Plain text needs lines like "# Genesis 1" or "Genesis 1".');
+  }
+  return { name: null, books };
+}
+
+/* =========================================================
+   TYPING ENGINE
+   ========================================================= */
+const IDLE_CAP = 4000;   // ms; pauses longer than this don't count toward WPM
+const TYP = {
+  text:'', i:0, spans:[], words:[],
+  started:false, lastKey:0, activeMs:0,
+  keystrokes:0, correct:0, errors:0, skipped:0,
+  wordsDone:0, counted:new Set(), errWords:{},
+  timer:null, finished:false, startI:0, ghostIdx:-1, ghostWpm:0
+};
+
+/* ----- character equivalence: curly quotes, dashes, accents, etc. ----- */
+const FOLD = {
+  '\u201C':'"','\u201D':'"','\u201E':'"','\u201F':'"','\u00AB':'"','\u00BB':'"','\u2033':'"',
+  '\u2018':"'",'\u2019':"'",'\u201A':"'",'\u201B':"'",'\u2032':"'",'\u02BC':"'",
+  '\u2013':'-','\u2014':'-','\u2015':'-','\u2012':'-','\u2212':'-','\u2010':'-','\u2011':'-',
+  '\u2026':'.',
+  '\u00A0':' ','\u2002':' ','\u2003':' ','\u2009':' ','\u202F':' ','\u200A':' ',
+  '\u200B':'','\u200C':'','\u200D':'','\uFEFF':'','\u00AD':''
+};
+function fold(c){
+  if(Object.prototype.hasOwnProperty.call(FOLD, c)) return FOLD[c];
+  if(c.charCodeAt(0) < 128) return c;
+  return c.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+/* A character is "typable" if it reduces to plain ASCII. Anything else is auto-skipped
+   so the trainer can never get permanently stuck on a symbol your keyboard can't produce. */
+function isTypable(c){
+  const f = fold(c);
+  return f.length > 0 && /^[\x00-\x7f]+$/.test(f);
+}
+function matches(typed, expected){
+  if(typed === expected) return true;
+  return !!DB.settings.lenient && fold(typed) === fold(expected);
+}
+function normWord(w){
+  const s = w.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '').toLowerCase();
+  return s || w;
+}
+
+function currentChapter(){
+  if(!ACTIVE) return null;
+  const b = ACTIVE.books[DB.cur.b];
+  return b ? b.chapters[DB.cur.c] : null;
+}
+function currentBook(){ return ACTIVE ? ACTIVE.books[DB.cur.b] : null; }
+/* Shared chapter identity: the same book + chapter number in ANY version. */
+function bookId(name){ const n = normBook(name); return BOOK_ABBR[n] || n; }
+function chapId(b, c, bible){
+  const bk = (bible || ACTIVE)?.books[b], ch = bk?.chapters[c];
+  return bookId(bk?.name || '') + '::' + (ch?.n ?? (c+1));
+}
+function progOf(b, c){ return DB.canon[chapId(b, c)] || null; }
+function progKey(b,c){ return DB.activeId ? `${DB.activeId}::${b}::${c}` : `tmp::${b}::${c}`; }
+
+function computeWords(text){
+  const out = [];
+  const re = /\S+/g; let m;
+  while((m = re.exec(text))) out.push({ start:m.index, end:m.index+m[0].length, w:m[0] });
+  return out;
+}
+function wordAt(i){
+  const W = TYP.words;
+  let lo=0, hi=W.length-1;
+  while(lo<=hi){
+    const mid=(lo+hi)>>1, w=W[mid];
+    if(i < w.start) hi = mid-1;
+    else if(i >= w.end) lo = mid+1;
+    else return w;
+  }
+  if(i>0) return wordAt(i-1);
+  return null;
+}
+
+/* ----- timing (idle-aware) ----- */
+function touch(){
+  const n = performance.now();
+  if(TYP.lastKey) TYP.activeMs += Math.min(n - TYP.lastKey, IDLE_CAP);
+  TYP.lastKey = n;
+}
+function activeNow(){
+  if(!TYP.started) return 0;
+  return TYP.activeMs + Math.min(performance.now() - TYP.lastKey, IDLE_CAP);
+}
+function beginIfNeeded(){
+  if(!TYP.started){ TYP.started = true; TYP.startI = TYP.i; TYP.lastKey = performance.now(); startTimer(); }
+  else touch();
+}
+
+/* ----- resume support ----- */
+function setPartial(k, i){ DB.partial[k] = i; DB.partialTs[k] = Date.now(); }
+function savePartial(){
+  if(!ACTIVE || TYP.finished || !TYP.text) return;
+  const k = progKey(DB.cur.b, DB.cur.c);
+  setPartial(k, (TYP.i > 0 && TYP.i < TYP.text.length) ? TYP.i : 0);
+}
+
+function resetTyping(){
+  stopTimer();
+  Object.assign(TYP, {
+    text:'', i:0, spans:[], words:[],
+    started:false, lastKey:0, activeMs:0,
+    keystrokes:0, correct:0, errors:0, skipped:0,
+    wordsDone:0, counted:new Set(), errWords:{}, finished:false, startI:0, ghostIdx:-1
+  });
+  $('#done-overlay').classList.add('hidden');
+  renderTyping();
+  if(ACTIVE) renderTypeSelectors();
+  renderLiveStats();
+}
+function restartChapter(){
+  setPartial(progKey(DB.cur.b, DB.cur.c), 0);
+  resetTyping();
+}
+
+function renderTyping(){
+  const cont = $('#type-text');
+  const ch = currentChapter();
+  if(!ch){ cont.textContent = 'No chapter loaded. Import a version in the Library tab.'; return; }
+
+  TYP.text = ch.text;
+  TYP.words = computeWords(ch.text);
+  TYP.spans = new Array(ch.text.length);
+
+  const frag = document.createDocumentFragment();
+  const vmap = new Map((ch.vs || []).map(([vn,o])=>[o, vn]));
+  for(let i=0;i<ch.text.length;i++){
+    if(vmap.has(i)){ const sup = document.createElement('sup'); sup.className = 'vn'; sup.textContent = vmap.get(i); frag.appendChild(sup); }
+    const sp = document.createElement('span');
+    sp.className = 'ch';
+    sp.textContent = ch.text[i];
+    frag.appendChild(sp);
+    TYP.spans[i] = sp;
+  }
+  cont.innerHTML = '';
+  cont.appendChild(frag);
+
+  // resume where the person left off
+  const p = DB.partial[progKey(DB.cur.b, DB.cur.c)] || 0;
+  let resumed = false;
+  if(p > 0 && p < ch.text.length){
+    for(let i=0;i<p;i++) TYP.spans[i].classList.add('ok');
+    TYP.i = p; resumed = true;
+  }
+  if(TYP.spans[TYP.i]) TYP.spans[TYP.i].classList.add('cur');
+  advanceSkips();
+  $('#type-panel').scrollTop = 0;
+  TYP.ghostWpm = ghostPace();
+  if(resumed) requestAnimationFrame(()=>scrollToCaret(true));
+  renderLiveStats();
+}
+
+function scrollToCaret(force){
+  const s = TYP.spans[TYP.i];
+  if(!s) return;
+  const panel = $('#type-panel');
+  const sr = s.getBoundingClientRect();
+  const pr = panel.getBoundingClientRect();
+  if(force || sr.top < pr.top + 30 || sr.bottom > pr.bottom - 50){
+    panel.scrollTop += (sr.top - pr.top) - pr.height * 0.35;
+  }
+}
+
+/* Auto-skip characters that cannot be typed on a normal keyboard. */
+function advanceSkips(){
+  while(TYP.i < TYP.text.length && !isTypable(TYP.text[TYP.i])){
+    const sp = TYP.spans[TYP.i];
+    sp.classList.remove('cur'); sp.classList.add('ok','skip');
+    TYP.i++;
+  }
+  if(TYP.i < TYP.text.length) TYP.spans[TYP.i].classList.add('cur');
+}
+
+function clearSpan(i){
+  const sp = TYP.spans[i];
+  if(sp) sp.classList.remove('ok','bad','cur','skip');
+}
+
+function typeChar(ch){
+  if(TYP.finished) return;
+  const expected = TYP.text[TYP.i];
+  if(expected === undefined) return;
+
+  beginIfNeeded();
+  TYP.keystrokes++; focusTouch();
+
+  if(matches(ch, expected)){
+    TYP.correct++; sfx('key');
+    const sp = TYP.spans[TYP.i];
+    sp.classList.remove('cur','bad');
+    sp.classList.add('ok');
+
+    const w = wordAt(TYP.i);
+    if(w && TYP.i === w.end-1 && !TYP.counted.has(w.start)){
+      TYP.counted.add(w.start);
+      TYP.wordsDone++;
+      const nw = normWord(w.w);
+      DB.stats.wordTyped[nw] = (DB.stats.wordTyped[nw]||0) + 1;
+      DB.stats.wordsTyped++;
+      setPartial(progKey(DB.cur.b, DB.cur.c), TYP.i + 1);
+      saveDB();
+    }
+    if(expected.trim()) DB.stats.charsTyped++;
+
+    TYP.i++;
+    advanceSkips();
+    scrollToCaret();
+    renderLiveStats();
+    if(TYP.i >= TYP.text.length) completeChapter();
+  } else {
+    TYP.errors++; sfx('err');
+    const sp = TYP.spans[TYP.i];
+    sp.classList.add('bad');
+    setTimeout(()=>sp.classList.remove('bad'), 180);
+
+    const w = wordAt(TYP.i);
+    if(w){
+      const nw = normWord(w.w);
+      TYP.errWords[nw] = (TYP.errWords[nw]||0) + 1;
+      DB.stats.wordErr[nw] = (DB.stats.wordErr[nw]||0) + 1;
+    }
+    DB.stats.charErr[expected] = (DB.stats.charErr[expected]||0) + 1;
+    const conf = expected + '>' + ch;
+    DB.stats.confusion[conf] = (DB.stats.confusion[conf]||0) + 1;
+    saveDB();
+    renderLiveStats();
+  }
+}
+
+/* Tab: deliberately skip the current character (escape hatch). */
+function skipChar(){
+  if(TYP.finished || TYP.i >= TYP.text.length) return;
+  beginIfNeeded();
+  const sp = TYP.spans[TYP.i];
+  sp.classList.remove('cur','bad'); sp.classList.add('ok','skip');
+  TYP.skipped++;
+  TYP.i++;
+  advanceSkips();
+  scrollToCaret();
+  renderLiveStats();
+  if(TYP.i >= TYP.text.length) completeChapter();
+}
+
+function backspace(){
+  if(TYP.finished || TYP.i === 0) return;
+  if(TYP.started) touch();
+  clearSpan(TYP.i);
+  TYP.i--;
+  while(TYP.i > 0 && !isTypable(TYP.text[TYP.i])){ clearSpan(TYP.i); TYP.i--; }
+  clearSpan(TYP.i);
+  advanceSkips();   // only matters if index 0 itself is untypable
+  scrollToCaret();
+  renderLiveStats();
+}
+
+function startTimer(){
+  if(TYP.timer) return;
+  TYP.timer = setInterval(renderLiveStats, 200);
+}
+function stopTimer(){
+  clearInterval(TYP.timer);
+  TYP.timer = null;
+}
+
+function liveWpm(){
+  const ms = activeNow();
+  if(ms < 1500) return 0;
+  return Math.round((TYP.correct/5)/(ms/60000));
+}
+function liveAcc(){
+  if(!TYP.keystrokes) return 100;
+  return Math.round(TYP.correct / TYP.keystrokes * 100);
+}
+
+function renderLiveStats(){
+  $('#st-wpm').textContent = liveWpm();
+  $('#st-acc').textContent = liveAcc() + '%';
+  $('#st-err').textContent = TYP.errors;
+  const pct = TYP.text.length ? Math.round(TYP.i / TYP.text.length * 100) : 0;
+  $('#st-prog').textContent = pct + '%';
+  $('#st-time').textContent = fmtTime(activeNow()/1000);
+  updateGhost();
+  $('#focus-bar').style.width = pct + '%';
+}
+
+function completeChapter(){
+  if(TYP.finished) return;
+  TYP.finished = true;
+  touch();
+  stopTimer();
+  unfocus(); sfx('done');
+  const secs = Math.max(1, TYP.activeMs/1000);
+  const wpm = Math.max(1, Math.round((TYP.correct/5)/(secs/60)));
+  const acc = liveAcc();
+  const words = TYP.words.length;
+  const chars = TYP.text.length;
+
+  recordSession({ secs, wpm, acc, chars, words: TYP.wordsDone, done:true, pct:100 });
+
+  const k = progKey(DB.cur.b, DB.cur.c);
+  const prev = progOf(DB.cur.b, DB.cur.c) || {};
+  const rec = { done:true, bestWpm: Math.max(prev.bestWpm||0, wpm), words, ts: Date.now() };
+  DB.progress[k] = rec;
+  DB.canon[chapId(DB.cur.b, DB.cur.c)] = rec;   // counts in every version and plan
+  setPartial(k, 0);
+
+  DB.completions.push({
+    ts: Date.now(), vid: DB.activeId, b: DB.cur.b, c: DB.cur.c,
+    book: currentBook()?.name || '', chap: currentChapter()?.n || (DB.cur.c+1),
+    wpm, acc, words
+  });
+  if(DB.completions.length > 20000) DB.completions = DB.completions.slice(-20000);
+  const milestones = checkMilestones();
+  syncSoon();
+  flushDB();
+  renderTypeSelectors();
+
+  const trouble = Object.entries(TYP.errWords).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  $('#done-stats').innerHTML =
+    `<div class="big">${wpm} WPM</div>
+     <div style="margin-top:6px">${acc}% accuracy · ${words} words · ${fmtTime(secs)}${TYP.skipped?` · ${TYP.skipped} skipped`:''}</div>` +
+    (trouble.length ? `<div style="margin-top:10px;font-size:12.5px">Trouble words: ${trouble.map(([w,n])=>`<span class="wordchip">${esc(w)} <b>${n}</b></span>`).join('')}</div>` : '');
+  if(milestones.length) $('#done-stats').insertAdjacentHTML('beforeend', '<div class="ms">' + milestones.map(esc).join('<br>') + '</div>');
+  $('#done-overlay').classList.remove('hidden');
+}
+
+function recordSession({secs, wpm, acc, chars, words, done=false, pct=0}){
+  if(!TYP.started || secs < 1 || TYP.correct < 10) return false;
+  DB.sessions.push({
+    ts: Date.now(),
+    vid: DB.activeId,
+    b: DB.cur.b, c: DB.cur.c,
+    book: currentBook()?.name || '',
+    chap: currentChapter()?.n || 1,
+    wpm, acc, chars, words, secs: Math.round(secs), done, pct
+  });
+  if(DB.sessions.length > 5000) DB.sessions = DB.sessions.slice(-5000);
+  flushDB();
+  return true;
+}
+
+function stopAndSave(){
+  if(!TYP.started || TYP.finished){ resetTyping(); return; }
+  const secs = activeNow()/1000;
+  const wpm = liveWpm(), acc = liveAcc();
+  const pct = Math.round(TYP.i / TYP.text.length * 100);
+  // words = words actually typed this session (not the whole chapter)
+  const ok = recordSession({ secs, wpm, acc, chars: TYP.i, words: TYP.wordsDone, done:false, pct });
+  savePartial();
+  syncSoon();
+  toast(ok ? 'Session saved — this chapter will resume where you stopped'
+           : 'Not saved — need at least 10 correct characters and 1 second');
+  resetTyping();
+}
+
+function stepChapter(d){
+  if(!ACTIVE) return;
+  const book = ACTIVE.books[DB.cur.b];
+  let nb = DB.cur.b, nc = DB.cur.c;
+  if(d > 0){
+    if(nc < book.chapters.length-1) nc++;
+    else if(nb < ACTIVE.books.length-1){ nb++; nc = 0; }
+    else { toast('You finished the last chapter in this version! 🏆'); return; }
+  } else {
+    if(nc > 0) nc--;
+    else if(nb > 0){ nb--; nc = ACTIVE.books[nb].chapters.length-1; }
+    else return;
+  }
+  savePartial();
+  DB.cur.b = nb; DB.cur.c = nc;
+  flushDB();
+  resetTyping();
+  renderTypeSelectors();
+  focusTyping();
+}
+
+/* =========================================================
+   Backfill the completions log from older progress data
+   ========================================================= */
+async function migrateCanon(){
+  if(DB.canonSeeded) return;
+  DB.canonSeeded = true;
+  for(const [k,p] of Object.entries(DB.progress)){
+    if(!p || !p.done) continue;
+    const [vid,bs,cs] = k.split('::');
+    const bible = await loadBible(vid);
+    if(!bible?.books?.[+bs]?.chapters?.[+cs]) continue;
+    const id = chapId(+bs, +cs, bible), old = DB.canon[id];
+    if(!old || (p.ts||0) > (old.ts||0)) DB.canon[id] = { ...p, bestWpm: Math.max(p.bestWpm||0, old?.bestWpm||0) };
+  }
+  flushDB();
+}
+
+async function backfillCompletions(){
+  if(DB.seeded) return;
+  DB.seeded = true;
+  if(DB.completions.length) { flushDB(); return; }
+  for(const [k,p] of Object.entries(DB.progress)){
+    if(!p || !p.done || !p.ts) continue;
+    const [vid,bs,cs] = k.split('::');
+    const bible = await loadBible(vid);
+    const book = bible?.books?.[+bs], chap = book?.chapters?.[+cs];
+    if(!book || !chap) continue;
+    DB.completions.push({ ts:p.ts, vid, b:+bs, c:+cs, book:book.name, chap:chap.n, wpm:p.bestWpm||0, acc:0, words:p.words||0, legacy:true });
+  }
+  flushDB();
+}
+
+/* =========================================================
+   VIEW RENDERERS
+   ========================================================= */
+
+function renderAll(){
+  renderVersionSelect();
+  renderTypeSelectors();
+  renderLiveStats();
+  const active = $$('#tabs button').find(b=>b.classList.contains('active'))?.dataset.view || 'type';
+  if(active==='today') renderToday();
+  if(active==='goals') renderGoals();
+  if(active==='history') renderHistory();
+  if(active==='calendar') renderCalendar();
+  if(active==='analysis') renderAnalysis();
+  if(active==='library') renderLibrary();
+}
+
+function renderVersionSelect(){
+  const sel = $('#sel-version');
+  sel.innerHTML = '';
+  DB.versions.forEach(v=>{
+    const o = document.createElement('option');
+    o.value = v.id; o.textContent = `${v.name} (${v.chapters} ch)`;
+    if(v.id === DB.activeId) o.selected = true;
+    sel.appendChild(o);
+  });
+  if(!DB.versions.length){
+    const o = document.createElement('option');
+    o.textContent = 'No versions';
+    sel.appendChild(o);
+  }
+}
+
+function renderTypeSelectors(){
+  const selB = $('#sel-book'), selC = $('#sel-chapter');
+  selB.innerHTML = ''; selC.innerHTML = '';
+  if(!ACTIVE){ return; }
+
+  ACTIVE.books.forEach((b, i)=>{
+    const o = document.createElement('option');
+    o.value = i;
+    const done = b.chapters.filter((_,ci)=>progOf(i,ci)?.done).length;
+    o.textContent = `${b.name}  (${done}/${b.chapters.length})`;
+    if(i === DB.cur.b) o.selected = true;
+    selB.appendChild(o);
+  });
+
+  const book = ACTIVE.books[DB.cur.b];
+  if(!book) return;
+  book.chapters.forEach((c, i)=>{
+    const o = document.createElement('option');
+    o.value = i;
+    const done = progOf(DB.cur.b, i)?.done;
+    o.textContent = `Chapter ${c.n}${done ? ' ✓' : ''}`;
+    if(i === DB.cur.c) o.selected = true;
+    selC.appendChild(o);
+  });
+}
+
+/* ---------- Goals ---------- */
+function progressSummary(){
+  if(!ACTIVE) return null;
+  let totalCh=0, doneCh=0, totalWords=0, doneWords=0;
+  const perBook = [];
+  ACTIVE.books.forEach((b,bi)=>{
+    let bTotal=0, bDone=0, bWords=0, bDoneWords=0;
+    b.chapters.forEach((c,ci)=>{
+      const wc = c._wc ?? (c._wc = countWords(c.text));
+      bTotal++; bWords += wc;
+      if(progOf(bi,ci)?.done){ bDone++; bDoneWords += wc; }
+    });
+    totalCh += bTotal; doneCh += bDone;
+    totalWords += bWords; doneWords += bDoneWords;
+    perBook.push({ bi, name:b.name, total:bTotal, done:bDone, words:bWords, doneWords:bDoneWords });
+  });
+  return { totalCh, doneCh, totalWords, doneWords, perBook };
+}
+
+function renderGoals(){
+  if(!ACTIVE){ $('#goals-ver').textContent = '— no version loaded —'; return; }
+  const s = progressSummary();
+  $('#goals-ver').textContent = ACTIVE.name;
+
+  const pct = s.totalCh ? (s.doneCh/s.totalCh*100) : 0;
+  $('#goals-bar').style.width = pct.toFixed(1)+'%';
+  $('#goals-ch').textContent = `${s.doneCh} / ${s.totalCh}`;
+  $('#goals-pct').textContent = pct.toFixed(1)+'%';
+  $('#goals-words').textContent = fmtNum(s.doneWords);
+
+  const avgWpm = DB.sessions.length
+    ? Math.round(DB.sessions.reduce((a,x)=>a+x.wpm,0)/DB.sessions.length) : 0;
+  $('#avg-wpm').textContent = avgWpm;
+  $('#best-wpm').textContent = DB.sessions.length ? Math.max(...DB.sessions.map(x=>x.wpm)) : 0;
+
+  const remainingWords = s.totalWords - s.doneWords;
+  if(avgWpm > 0){
+    const hours = remainingWords / (avgWpm*60);
+    $('#goals-remain').textContent = hours < 1 ? '<1' : Math.round(hours).toLocaleString();
+
+    // ETA based on daily goal
+    const perDay = DB.settings.dailyWords;
+    const days = Math.ceil(remainingWords / perDay);
+    const d = new Date(); d.setDate(d.getDate()+days);
+    $('#goals-eta').textContent = days > 3650 ? '—' : d.toLocaleDateString(undefined,{month:'short', day:'numeric', year:'numeric'});
+  } else {
+    $('#goals-remain').textContent = '–';
+    $('#goals-eta').textContent = '–';
+  }
+
+  // daily goal
+  $('#daily-goal').value = DB.settings.dailyWords;
+  const today = dayKey();
+  const todayWords = DB.sessions.filter(x=>dayKey(new Date(x.ts))===today).reduce((a,x)=>a+x.words,0);
+  $('#today-words').textContent = fmtNum(todayWords);
+  $('#today-bar').style.width = clamp(todayWords/DB.settings.dailyWords*100, 0, 100).toFixed(1)+'%';
+
+  // streak
+  const days = new Set(DB.sessions.map(x=>dayKey(new Date(x.ts))));
+  let streak = 0; const dd = new Date();
+  if(!days.has(dayKey(dd))) dd.setDate(dd.getDate()-1);
+  while(days.has(dayKey(dd))){ streak++; dd.setDate(dd.getDate()-1); }
+  $('#streak').textContent = streak;
+
+  // chart
+  $('#goals-chart').innerHTML = wpmChart(DB.sessions);
+
+  renderBibleMap(s);
+}
+
+function wpmChart(sessions){
+  const s = sessions.slice(-40);
+  if(s.length < 2) return '<div class="muted" style="padding:20px 0">Not enough sessions yet — type a chapter to start the chart.</div>';
+  const W=700, H=180, padL=34, padR=10, padT=12, padB=22;
+  const maxW = Math.max(...s.map(x=>x.wpm), 20) * 1.15;
+  const px = i => padL + i*(W-padL-padR)/Math.max(1,(s.length-1));
+  const py = v => H-padB - (v/maxW)*(H-padT-padB);
+  const pts = s.map((x,i)=>`${px(i).toFixed(1)},${py(x.wpm).toFixed(1)}`);
+  const area = `M ${px(0)},${H-padB} L ${pts.join(' L ')} L ${px(s.length-1)},${H-padB} Z`;
+
+  const gridLines = [0,.25,.5,.75,1].map(f=>{
+    const y = (H-padB) - f*(H-padT-padB);
+    return `<line class="axis" x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}"/>
+            <text x="4" y="${y+3}">${Math.round(maxW*f)}</text>`;
+  }).join('');
+
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+    ${gridLines}
+    <path class="area" d="${area}"/>
+    <polyline class="line" points="${pts.join(' ')}"/>
+  </svg>`;
+}
+
+/* ---------- History ---------- */
+function updateClearHistoryLabel(){
+  const btn = $('#btn-clear-history');
+  if(!btn) return;
+  const n = DB.sessions.length;
+  btn.textContent = n
+    ? `Clear ${n.toLocaleString()} session${n===1?'':'s'}`
+    : 'Clear history';
+}
+
+function renderHistory(){
+  updateClearHistoryLabel();
+  if(!DB.sessions.length){
+    $('#history-table').innerHTML = '<p class="muted">No sessions yet. Go type something!</p>';
+    return;
+  }
+  const rows = DB.sessions.slice().reverse().slice(0, 300).map(s=>{
+    const d = new Date(s.ts);
+    return `<tr>
+      <td class="muted">${d.toLocaleDateString()} ${pad2(d.getHours())}:${pad2(d.getMinutes())}</td>
+      <td>${esc(s.book||'')} ${s.chap||''}</td>
+      <td><b style="color:var(--accent)">${s.wpm}</b></td>
+      <td style="color:${s.acc>=97?'var(--good)':s.acc>=90?'var(--warn)':'var(--bad)'}">${s.acc}%</td>
+      <td>${fmtNum(s.words)}</td>
+      <td class="muted">${fmtTime(s.secs)}</td>
+    </tr>`;
+  }).join('');
+  $('#history-table').innerHTML = `<table>
+    <thead><tr><th>When</th><th>Passage</th><th>WPM</th><th>Accuracy</th><th>Words</th><th>Time</th></tr></thead>
+    <tbody>${rows}</tbody></table>`;
+}
+
+/* ---------- Calendar ---------- */
+function abbr(name){
+  { const a = BOOK_ABBR[normBook(name)]; if(a) return a; }
+  const m = String(name).match(/^(\d)\s*(.*)$/);
+  return m ? m[1] + m[2].slice(0,3) : String(name).slice(0,3);
+}
+function rangesText(nums){
+  nums = [...new Set(nums)].sort((a,b)=>a-b);
+  if(!nums.length) return '';
+  const out = []; let s = nums[0], p = s;
+  for(let i=1;i<=nums.length;i++){
+    const n = nums[i];
+    if(n === p+1){ p = n; continue; }
+    out.push(s === p ? `${s}` : `${s}–${p}`);
+    s = n; p = n;
+  }
+  return out.join(', ');
+}
+function groupByBook(list){
+  const m = new Map();
+  list.forEach(c=>{
+    const name = c.book || `Book ${(c.b||0)+1}`;
+    if(!m.has(name)) m.set(name, []);
+    m.get(name).push(c.chap ?? (c.c+1));
+  });
+  return [...m].map(([book,chaps])=>({ book, chaps, count: new Set(chaps).size, text: rangesText(chaps) }));
+}
+
+function renderCalendar(){
+  renderHeatmap();
+  const now = new Date();
+  if(!DB.calMonth) DB.calMonth = `${now.getFullYear()}-${pad2(now.getMonth()+1)}`;
+  const [Y,M] = DB.calMonth.split('-').map(Number);
+  const first = new Date(Y, M-1, 1);
+  const daysInMonth = new Date(Y, M, 0).getDate();
+  const startDow = first.getDay();
+  const prefix = `${Y}-${pad2(M)}-`;
+
+  $('#cal-title').textContent = first.toLocaleDateString(undefined, {month:'long', year:'numeric'});
+
+  const perDay = {};
+  DB.sessions.forEach(s=>{
+    const k = dayKey(new Date(s.ts));
+    perDay[k] = (perDay[k]||0) + s.words;
+  });
+  const compsByDay = {};
+  DB.completions.forEach(c=>{
+    const k = dayKey(new Date(c.ts));
+    (compsByDay[k] = compsByDay[k] || []).push(c);
+  });
+  const maxDay = Math.max(1, ...Object.values(perDay));
+
+  /* ----- month summary ----- */
+  const mComps = DB.completions.filter(c=>dayKey(new Date(c.ts)).startsWith(prefix));
+  const mWords = Object.entries(perDay).filter(([k])=>k.startsWith(prefix)).reduce((a,[,n])=>a+n, 0);
+  const activeDays = new Set([
+    ...Object.keys(perDay).filter(k=>k.startsWith(prefix)),
+    ...Object.keys(compsByDay).filter(k=>k.startsWith(prefix))
+  ]).size;
+  const mGroups = groupByBook(mComps);
+  $('#cal-month-summary').innerHTML = `
+    <div class="row" style="gap:26px; margin-bottom:10px">
+      <div class="kpi"><b>${mComps.length}</b><small>Chapters completed</small></div>
+      <div class="kpi"><b>${fmtNum(mWords)}</b><small>Words typed</small></div>
+      <div class="kpi"><b>${activeDays}</b><small>Active days</small></div>
+      <div class="kpi"><b>${mGroups.length}</b><small>Books touched</small></div>
+    </div>
+    <div>${mGroups.length
+      ? mGroups.map(g=>`<span class="wordchip ok">${esc(g.book)} ${esc(g.text)} <b>${g.count} ch</b></span>`).join('')
+      : '<span class="muted" style="font-size:13px">No chapters completed this month yet.</span>'}</div>`;
+
+  /* ----- grid ----- */
+  const grid = $('#cal-grid');
+  grid.innerHTML = '';
+  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d=>{
+    const e = document.createElement('div'); e.className='dow'; e.textContent = d; grid.appendChild(e);
+  });
+  for(let i=0;i<startDow;i++){
+    const e = document.createElement('div'); e.className='day out'; grid.appendChild(e);
+  }
+  const todayK = dayKey();
+  for(let d=1; d<=daysInMonth; d++){
+    const k = `${Y}-${pad2(M)}-${pad2(d)}`;
+    const words = perDay[k] || 0;
+    const comps = compsByDay[k] || [];
+    const groups = groupByBook(comps);
+    const e = document.createElement('div');
+    e.className = 'day' + (k===todayK ? ' today' : '') + (DB.selectedDay===k ? ' sel' : '');
+    if(words || comps.length){
+      const intensity = words ? clamp(words/maxDay, 0.12, 1) : 0.12;
+      e.style.background = `rgba(78,161,255,${(0.10 + intensity*0.38).toFixed(2)})`;
+      e.style.borderColor = 'rgba(78,161,255,.5)';
+    }
+    const labels = groups.slice(0,2).map(g=>`<span class="cb">${esc(abbr(g.book))} ${esc(g.text)}</span>`).join('')
+                 + (groups.length > 2 ? `<span class="cb">+${groups.length-2} more</span>` : '');
+    e.innerHTML = `<div class="top"><span class="n">${d}</span>${comps.length?'<span class="ck">✓</span>':''}</div>
+                   ${words?`<span class="w">${words>999?(Math.round(words/100)/10)+'k':words} w</span>`:''}
+                   ${labels}`;
+    e.title = `${k}: ${fmtNum(words)} words` + (groups.length ? '\nCompleted: ' + groups.map(g=>`${g.book} ${g.text}`).join('; ') : '');
+    e.onclick = ()=>{ DB.selectedDay = k; renderCalendar(); };
+    grid.appendChild(e);
+  }
+
+  /* ----- day detail ----- */
+  const sel = DB.selectedDay;
+  if(!sel){
+    $('#cal-day-title').textContent = 'Select a day';
+    $('#cal-day-detail').innerHTML = '<span class="muted">Click a day to see what you completed.</span>';
+    return;
+  }
+  const list = DB.sessions.filter(s=>dayKey(new Date(s.ts))===sel);
+  const comps = compsByDay[sel] || [];
+  $('#cal-day-title').textContent = new Date(sel+'T12:00:00').toLocaleDateString(undefined,{weekday:'long', month:'long', day:'numeric', year:'numeric'});
+  if(!list.length && !comps.length){
+    $('#cal-day-detail').innerHTML = '<span class="muted">No typing on this day.</span>';
+    return;
+  }
+  const totalWords = list.reduce((a,x)=>a+x.words,0);
+  const wpms = list.map(x=>x.wpm).concat(comps.map(c=>c.wpm||0));
+  const best = wpms.length ? Math.max(...wpms) : 0;
+  const groups = groupByBook(comps);
+  const statusOf = s => s.done ? '<span style="color:var(--good)">✓ Completed</span>'
+                   : (s.pct != null ? `<span class="muted">Partial ${s.pct}%</span>` : '<span class="muted">—</span>');
+  $('#cal-day-detail').innerHTML = `
+    <div class="row" style="gap:26px; margin-bottom:12px">
+      <div class="kpi"><b>${fmtNum(totalWords)}</b><small>Words</small></div>
+      <div class="kpi"><b>${comps.length}</b><small>Chapters completed</small></div>
+      <div class="kpi"><b>${list.length}</b><small>Sessions</small></div>
+      <div class="kpi"><b>${best}</b><small>Best WPM</small></div>
+    </div>
+    <div style="margin-bottom:12px">
+      <div class="muted" style="font-size:11px; text-transform:uppercase; letter-spacing:.7px; margin-bottom:6px">Completed</div>
+      ${groups.length
+        ? groups.map(g=>`<span class="wordchip ok">${esc(g.book)} ${esc(g.text)} <b>${g.count} ch</b></span>`).join('')
+        : '<span class="muted" style="font-size:13px">No full chapters finished this day.</span>'}
+    </div>
+    ${list.length ? `<table><thead><tr><th>Time</th><th>Passage</th><th>Status</th><th>WPM</th><th>Acc</th><th>Words</th></tr></thead><tbody>
+      ${list.map(s=>{ const d=new Date(s.ts); return `<tr>
+        <td class="muted">${pad2(d.getHours())}:${pad2(d.getMinutes())}</td>
+        <td>${esc(s.book||'')} ${s.chap||''}</td>
+        <td>${statusOf(s)}</td>
+        <td><b>${s.wpm}</b></td><td>${s.acc}%</td><td>${s.words}</td></tr>`; }).join('')}
+      </tbody></table>` : ''}`;
+}
+
+/* ---------- Analysis ---------- */
+function renderAnalysis(){
+  const st = DB.stats;
+  const typedWords = Object.entries(st.wordTyped);
+  const totalTyped = typedWords.reduce((a,[,n])=>a+n, 0);
+
+  $('#an-words').textContent = fmtNum(totalTyped);
+  $('#an-unique').textContent = fmtNum(typedWords.length);
+  $('#an-chars').textContent = fmtNum(st.charsTyped);
+
+  if(ACTIVE){
+    let total = 0;
+    ACTIVE.books.forEach(b=>b.chapters.forEach(c=>{ total += (c._wc ?? (c._wc = countWords(c.text))); }));
+    $('#an-bible').textContent = fmtNum(Math.max(0, total - totalTyped));
+  } else {
+    $('#an-bible').textContent = '–';
+  }
+
+  // mistyped
+  const errs = Object.entries(st.wordErr).sort((a,b)=>b[1]-a[1]).slice(0,60);
+  $('#an-mistyped').innerHTML = errs.length
+    ? errs.map(([w,n])=>{
+        const t = st.wordTyped[w] || 0;
+        const rate = t ? Math.round(n/(t+n)*100) : 100;
+        return `<span class="wordchip">${esc(w)} <b>${n}</b>${t?`<span class="muted" style="font-size:10.5px">${rate}%</span>`:''}</span>`;
+      }).join('')
+    : '<span class="muted">No errors recorded yet.</span>';
+
+  // confusions
+  const conf = Object.entries(st.confusion).sort((a,b)=>b[1]-a[1]).slice(0,40);
+  $('#an-confusion').innerHTML = conf.length
+    ? conf.map(([k,n])=>{
+        const e = [...k][0]; const g = k.slice(e.length+1);
+        const show = c => c===' ' ? '␣' : c;
+        return `<span class="wordchip">${esc(show(e))} <span class="muted">→</span> ${esc(show(g))} <b>${n}</b></span>`;
+      }).join('')
+    : '<span class="muted">No errors recorded yet.</span>';
+
+  // most typed
+  const typed = typedWords.sort((a,b)=>b[1]-a[1]).slice(0,60);
+  $('#an-typed').innerHTML = typed.length
+    ? typed.map(([w,n])=>`<span class="wordchip ok">${esc(w)} <b>${n}</b></span>`).join('')
+    : '<span class="muted">Start typing to build this.</span>';
+
+  // char heat
+  const chars = Object.entries(st.charErr).sort((a,b)=>b[1]-a[1]).slice(0,60);
+  const maxC = chars.length ? chars[0][1] : 1;
+  $('#an-chars2').innerHTML = chars.length
+    ? chars.map(([c,n])=>{
+        const p = n/maxC;
+        const show = c===' ' ? '␣' : (c==='\n' ? '⏎' : c);
+        return `<span class="wordchip" style="background:rgba(248,81,73,${(0.1+p*0.5).toFixed(2)}); border-color:rgba(248,81,73,.5)">
+          <span style="font-weight:800">${esc(show)}</span> <b style="color:#ffd7d4">${n}</b></span>`;
+      }).join('')
+    : '<span class="muted">No errors recorded yet.</span>';
+}
+
+/* ---------- Library ---------- */
+function renderLibrary(){
+  updateBackupInfo();
+  const list = $('#lib-list');
+  if(!DB.versions.length){
+    list.innerHTML = '<p class="muted">No versions installed.</p>';
+  } else {
+    list.innerHTML = DB.versions.map(v=>`
+      <div class="row" style="padding:9px 0; border-bottom:1px solid #1e2631">
+        <div>
+          <b>${esc(v.name)}</b>
+          ${v.id===DB.activeId ? '<span class="tag" style="margin-left:8px; color:var(--good)">active</span>' : ''}
+          ${v.builtin ? '<span class="tag" style="margin-left:6px">built-in</span>' : ''}
+          <div class="muted" style="font-size:12px">${v.books} books · ${fmtNum(v.chapters)} chapters · ${fmtNum(v.words)} words${v.verses ? '' : ' · no verse numbers (re-import to add them)'}</div>
+        </div>
+        <div class="spacer"></div>
+        ${v.id!==DB.activeId ? `<button class="btn ghost" data-activate="${v.id}">Use</button>` : ''}
+        <button class="btn ghost danger" data-del="${v.id}">Delete</button>
+      </div>`).join('');
+
+    list.querySelectorAll('[data-activate]').forEach(b=>{
+      b.onclick = async ()=>{ await setActiveVersion(b.dataset.activate); renderAll(); toast('Version loaded'); };
+    });
+    list.querySelectorAll('[data-del]').forEach(b=>{
+      b.onclick = ()=> deleteVersion(b.dataset.del);
+    });
+  }
+}
+
+/* =========================================================
+   UI BINDING
+   ========================================================= */
+function bindUI(){
+  // tabs
+  $$('#tabs button').forEach(b=>{
+    b.onclick = ()=> switchView(b.dataset.view);
+  });
+
+  // version / book / chapter selects
+  $('#sel-version').onchange = async e => {
+    savePartial();
+    await setActiveVersion(e.target.value);
+    renderAll();
+    e.target.blur();
+    focusTyping();
+  };
+  $('#sel-book').onchange = e => {
+    savePartial();
+    DB.cur.b = +e.target.value;
+    DB.cur.c = 0;
+    flushDB();
+    resetTyping();
+    renderTypeSelectors();
+    e.target.blur();
+    focusTyping();
+  };
+  $('#sel-chapter').onchange = e => {
+    savePartial();
+    DB.cur.c = +e.target.value;
+    flushDB();
+    resetTyping();
+    e.target.blur();
+    focusTyping();
+  };
+
+  $('#btn-restart').onclick = ()=>{ restartChapter(); focusTyping(); };
+  $('#btn-stop').onclick = ()=>{ stopAndSave(); };
+  $('#btn-again').onclick = ()=>{ restartChapter(); focusTyping(); };
+  $('#btn-next').onclick = ()=> stepChapter(1);
+
+  // font size
+  const fs = $('#font-size');
+  fs.value = DB.settings.fontSize;
+  document.documentElement.style.setProperty('--fs', DB.settings.fontSize + 'px');
+  fs.oninput = e => {
+    DB.settings.fontSize = +e.target.value;
+    document.documentElement.style.setProperty('--fs', DB.settings.fontSize + 'px');
+    saveDB();
+  };
+
+  // focus handling
+  $('#type-panel').addEventListener('mousedown', ()=>{ setTimeout(()=>focusTyping(), 0); });
+
+  // keyboard
+  document.addEventListener('keydown', onKeyDown);
+
+  // goals
+  $('#daily-goal').onchange = e => {
+    DB.settings.dailyWords = clamp(+e.target.value || 500, 50, 20000);
+    flushDB(); renderGoals();
+  };
+
+  // history
+  $('#btn-clear-history').onclick = ()=>{
+    const n = DB.sessions.length;
+    if(!n) return;
+    if(!confirm(`Clear all ${n.toLocaleString()} session${n===1?'':'s'}? Progress and stats stay.`)) return;
+    DB.sessions = []; DB.historyClearedAt = Date.now(); flushDB(); renderHistory(); syncSoon();
+  };
+
+  // calendar nav
+  $('#cal-prev').onclick = ()=> shiftMonth(-1);
+  $('#cal-next').onclick = ()=> shiftMonth(1);
+
+  // library
+  $('#imp-go').onclick = async ()=>{
+    const raw = $('#imp-text').value;
+    const name = $('#imp-name').value.trim();
+    if(!raw.trim()){ toast('Nothing to import'); return; }
+    try{
+      const parsed = parseImport(raw);
+      const meta = await addVersion({ name: name || parsed.name || 'Imported', books: parsed.books });
+      await setActiveVersion(meta.id);
+      $('#imp-text').value = ''; $('#imp-name').value = '';
+      renderAll();
+      toast(`Imported ${meta.name}: ${meta.chapters} chapters`);
+      switchView('type');
+    }catch(err){
+      console.error(err);
+      toast('Import failed: ' + err.message);
+    }
+  };
+
+  $('#imp-file').onchange = e => {
+    const f = e.target.files[0];
+    if(!f) return;
+    const rd = new FileReader();
+    rd.onload = ()=>{
+      $('#imp-text').value = rd.result;
+      if(!$('#imp-name').value) $('#imp-name').value = f.name.replace(/\.[^.]+$/,'');
+      toast('File loaded — click "Import version"');
+    };
+    rd.readAsText(f);
+  };
+
+  $('#imp-sample').onclick = async ()=>{
+    const meta = await addVersion({ name: SAMPLE.name, books: SAMPLE.books }, {builtin:true});
+    await setActiveVersion(meta.id);
+    renderAll();
+    toast('Sample loaded');
+  };
+
+  $('#btn-export').onclick = async ()=>{
+    const dump = { state: DB, bibles: {} };
+    for(const v of DB.versions){
+      const b = await loadBible(v.id);
+      if(b) dump.bibles[v.id] = b;
+    }
+    const blob = new Blob([JSON.stringify(dump, null, 2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `bible-typing-backup-${dayKey()}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  $('#btn-wipe').onclick = async ()=>{
+    if(!confirm('Erase ALL versions, progress and history? This cannot be undone.')) return;
+    for(const v of DB.versions){ await idbDel('bible:'+v.id).catch(()=>{}); }
+    localStorage.removeItem(STORE_KEY);
+    localStorage.removeItem('btt.sync.v1');
+    location.reload();
+  };
+}
+
+
+/* =========================================================
+   EXTRAS: URL import, restore, prev/next, punctuation mode
+   ========================================================= */
+const BSB_URL = 'https://raw.githubusercontent.com/Amosamevor/Bible-json/refs/heads/main/versions/en/BEREAN%20STANDARD%20BIBLE.json';
+
+async function runUrlImport(url, name){
+  const st = $('#imp-status');
+  st.textContent = 'Downloading…';
+  try{
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const txt = await res.text();
+    st.textContent = 'Parsing ' + fmtNum(txt.length) + ' characters…';
+    await new Promise(r=>setTimeout(r, 30));
+    const parsed = parseImport(txt);
+    const meta = await addVersion({ name: name || parsed.name || 'Imported', books: parsed.books });
+    meta.url = url; flushDB();      // remembered so other devices can fetch it automatically
+    await setActiveVersion(meta.id);
+    st.textContent = `Done — ${meta.name}: ${meta.books} books, ${fmtNum(meta.chapters)} chapters, ${fmtNum(meta.words)} words.`;
+    renderAll();
+    toast(`Imported ${meta.name}`);
+    switchView('type');
+  }catch(err){
+    console.error(err);
+    st.textContent = 'Failed: ' + err.message +
+      (err instanceof TypeError ? '\n(Network or CORS problem — download the file manually and use "Load from file".)' : '');
+  }
+}
+
+function bindExtras(){
+  bindExtras2();
+  $('#btn-prev-ch').onclick = ()=> stepChapter(-1);
+  $('#btn-next-ch').onclick = ()=> stepChapter(1);
+
+  const sl = $('#sel-lenient');
+  sl.value = DB.settings.lenient ? '1' : '0';
+  sl.onchange = e => {
+    DB.settings.lenient = e.target.value === '1';
+    flushDB(); e.target.blur(); focusTyping();
+  };
+
+  $('#imp-url-go').onclick = ()=>{
+    const url = $('#imp-url').value.trim();
+    if(!url){ toast('Paste a URL first'); return; }
+    runUrlImport(url, $('#imp-name').value.trim());
+  };
+  $('#imp-bsb').onclick = ()=>{
+    $('#imp-url').value = BSB_URL;
+    runUrlImport(BSB_URL, $('#imp-name').value.trim() || 'BSB');
+  };
+
+  $('#cal-today').onclick = ()=>{ DB.calMonth = null; DB.selectedDay = dayKey(); renderCalendar(); };
+
+  $('#btn-restore').onclick = ()=> $('#restore-file').click();
+  $('#restore-file').onchange = async e => {
+    const f = e.target.files[0]; if(!f) return;
+    try{
+      const d = JSON.parse(await f.text());
+      if(!d.state || !d.bibles) throw new Error('This is not a backup file from this app.');
+      if(!confirm('Replace ALL current data with this backup?')) return;
+      for(const [id,b] of Object.entries(d.bibles)) await idbSet('bible:'+id, b);
+      localStorage.setItem(STORE_KEY, JSON.stringify(d.state));
+      location.reload();
+    }catch(err){ toast('Restore failed: ' + err.message); }
+    e.target.value = '';
+  };
+}
+
+
+/* =========================================================
+   v3 — book names, plans, today, map, heatmap, ghost, focus, themes
+   ========================================================= */
+function normBook(name){
+  let s = String(name).toLowerCase().trim();
+  s = s.replace(/^(first|1st)\s+/,'1 ').replace(/^(second|2nd)\s+/,'2 ').replace(/^(third|3rd)\s+/,'3 ');
+  s = s.replace(/^iii\.?\s+/,'3 ').replace(/^ii\.?\s+/,'2 ').replace(/^i\.?\s+(?=[a-z])/,'1 ');
+  return s.replace(/[^a-z0-9]/g,'');
+}
+const BOOK_ABBR = (()=>{
+  const list = [
+   ['genesis','Gen'],['exodus','Exo'],['leviticus','Lev'],['numbers','Num'],['deuteronomy','Deu'],['joshua','Jos'],['judges','Jdg'],['ruth','Rut'],
+   ['1samuel','1Sa'],['2samuel','2Sa'],['1kings','1Ki'],['2kings','2Ki'],['1chronicles','1Ch'],['2chronicles','2Ch'],['ezra','Ezr'],['nehemiah','Neh'],['esther','Est'],
+   ['job','Job'],['psalms','Psa'],['psalm','Psa'],['proverbs','Pro'],['ecclesiastes','Ecc'],['songofsolomon','Sng'],['songofsongs','Sng'],
+   ['isaiah','Isa'],['jeremiah','Jer'],['lamentations','Lam'],['ezekiel','Eze'],['daniel','Dan'],['hosea','Hos'],['joel','Joe'],['amos','Amo'],['obadiah','Oba'],
+   ['jonah','Jon'],['micah','Mic'],['nahum','Nah'],['habakkuk','Hab'],['zephaniah','Zep'],['haggai','Hag'],['zechariah','Zec'],['malachi','Mal'],
+   ['matthew','Mat'],['mark','Mrk'],['luke','Luk'],['john','Jhn'],['acts','Act'],['romans','Rom'],['1corinthians','1Co'],['2corinthians','2Co'],
+   ['galatians','Gal'],['ephesians','Eph'],['philippians','Php'],['colossians','Col'],['1thessalonians','1Th'],['2thessalonians','2Th'],
+   ['1timothy','1Ti'],['2timothy','2Ti'],['titus','Tit'],['philemon','Phm'],['hebrews','Heb'],['james','Jas'],['1peter','1Pe'],['2peter','2Pe'],
+   ['1john','1Jn'],['2john','2Jn'],['3john','3Jn'],['jude','Jud'],['revelation','Rev']
+  ];
+  const o = {}; list.forEach(([k,v])=>o[k]=v); return o;
+})();
+const NT_NAMES = new Set(['matthew','mark','luke','john','acts','romans','1corinthians','2corinthians','galatians','ephesians','philippians','colossians','1thessalonians','2thessalonians','1timothy','2timothy','titus','philemon','hebrews','james','1peter','2peter','1john','2john','3john','jude','revelation']);
+
+/* ---------- reading plans ---------- */
+const PLANS = [
+  { id:'nt90',     name:'New Testament · 90 days',     scope:'nt',      days:90 },
+  { id:'gos30',    name:'The Gospels · 30 days',       scope:'gospels', days:30 },
+  { id:'wis60',    name:'Psalms & Proverbs · 60 days', scope:'wisdom',  days:60 },
+  { id:'ot365',    name:'Old Testament · 1 year',      scope:'ot',      days:365 },
+  { id:'bible365', name:'Whole Bible · 1 year',        scope:'all',     days:365 },
+  { id:'bible3y',  name:'Whole Bible · 3 years',       scope:'all',     days:1095 }
+];
+function inScope(scope, name){
+  const n = normBook(name);
+  switch(scope){
+    case 'nt':      return NT_NAMES.has(n);
+    case 'ot':      return !NT_NAMES.has(n);
+    case 'gospels': return ['matthew','mark','luke','john'].includes(n);
+    case 'wisdom':  return n==='psalms' || n==='psalm' || n==='proverbs';
+    default:        return true;
+  }
+}
+function planList(def){
+  const out = []; let cum = 0;
+  if(!ACTIVE) return out;
+  ACTIVE.books.forEach((b,bi)=>{
+    if(!inScope(def.scope, b.name)) return;
+    b.chapters.forEach((c,ci)=>{
+      const wc = c._wc ?? (c._wc = countWords(c.text));
+      out.push({ b:bi, c:ci, name:b.name, n:c.n, start:cum });
+      cum += wc;
+    });
+  });
+  const per = (cum / def.days) || 1;
+  out.forEach(x=>{ x.day = Math.min(def.days-1, Math.floor(x.start / per)); });
+  return out;
+}
+function planInfo(){
+  const p = DB.plan; if(!p || !ACTIVE) return null;
+  const def = PLANS.find(x=>x.id===p.id); if(!def) return null;
+  const list = planList(def);
+  const start = new Date(p.start + 'T12:00:00');
+  const today = new Date(dayKey() + 'T12:00:00');
+  const idx = Math.max(0, Math.round((today - start) / 86400000));
+  const dueIdx = Math.min(idx, def.days - 1);
+  const isDone = x => !!progOf(x.b, x.c)?.done;
+  const pending = list.filter(x=>x.day <= dueIdx && !isDone(x));
+  const finish = new Date(start); finish.setDate(finish.getDate() + def.days);
+  return {
+    def, list, idx, dueIdx, pending,
+    todayItems: pending.filter(x=>x.day === dueIdx),
+    overdue: pending.filter(x=>x.day < dueIdx),
+    ahead: list.filter(x=>x.day > dueIdx && isDone(x)).length,
+    doneCount: list.filter(isDone).length,
+    total: list.length, finish
+  };
+}
+function chipsFor(items){
+  return groupByBook(items.map(x=>({ book:x.name, chap:x.n })))
+    .map(g=>`<span class="wordchip">${esc(g.book)} ${esc(g.text)}</span>`).join('');
+}
+
+/* ---------- navigation helper ---------- */
+function goTo(b, c){
+  if(!ACTIVE) return;
+  savePartial();
+  DB.cur.b = b; DB.cur.c = c;
+  flushDB();
+  switchView('type');
+  resetTyping();
+  renderTypeSelectors();
+  focusTyping();
+}
+function firstUndone(bi){
+  const bk = ACTIVE.books[bi];
+  const i = bk.chapters.findIndex((_,ci)=>!progOf(bi,ci)?.done);
+  return i < 0 ? 0 : i;
+}
+
+/* ---------- Today ---------- */
+function streakNow(){
+  const days = new Set(DB.sessions.map(x=>dayKey(new Date(x.ts))));
+  let s = 0; const dd = new Date();
+  if(!days.has(dayKey(dd))) dd.setDate(dd.getDate()-1);
+  while(days.has(dayKey(dd))){ s++; dd.setDate(dd.getDate()-1); }
+  return s;
+}
+function continueTarget(){
+  if(!ACTIVE) return null;
+  const ch = ACTIVE.books[DB.cur.b]?.chapters[DB.cur.c];
+  const part = DB.partial[progKey(DB.cur.b, DB.cur.c)];
+  if(ch && part > 0 && part < ch.text.length)
+    return { b:DB.cur.b, c:DB.cur.c, kind:'resume', pct:Math.round(part/ch.text.length*100) };
+  const pi = planInfo();
+  if(pi && pi.pending.length){ const x = pi.pending[0]; return { b:x.b, c:x.c, kind:'plan' }; }
+  const flat = [];
+  ACTIVE.books.forEach((b,bi)=>b.chapters.forEach((_,ci)=>flat.push([bi,ci])));
+  const at = Math.max(0, flat.findIndex(([b,c])=>b===DB.cur.b && c===DB.cur.c));
+  for(let n=0;n<flat.length;n++){
+    const [b,c] = flat[(at+n) % flat.length];
+    if(!progOf(b,c)?.done) return { b, c, kind:'next' };
+  }
+  return { b:DB.cur.b, c:DB.cur.c, kind:'done' };
+}
+
+function renderToday(){
+  renderBackupNote();
+  $('#today-date').textContent = new Date().toLocaleDateString(undefined,{weekday:'long', month:'long', day:'numeric'});
+  const btn = $('#btn-continue');
+  if(!ACTIVE){
+    $('#cont-title').textContent = 'Add a Bible version';
+    $('#cont-sub').textContent = 'Open the Library to import one';
+    btn.onclick = ()=>switchView('library');
+    $('#plan-card').innerHTML = '';
+    return;
+  }
+  const t = continueTarget();
+  const book = ACTIVE.books[t.b], chap = book.chapters[t.c];
+  $('#cont-title').textContent = (t.kind==='done' ? 'Revisit' : 'Continue') + ` · ${book.name} ${chap.n}`;
+  $('#cont-sub').textContent = ({
+    resume:`Resume at ${t.pct}%`, plan:"Today's reading plan", next:'Next up',
+    done:'Every chapter complete 🎉'
+  })[t.kind];
+  btn.onclick = ()=>goTo(t.b, t.c);
+
+  // daily ring
+  const today = dayKey();
+  const todayWords = DB.sessions.filter(x=>dayKey(new Date(x.ts))===today).reduce((a,x)=>a+x.words,0);
+  const goal = DB.settings.dailyWords || 500;
+  const frac = clamp(todayWords/goal, 0, 1);
+  $('#ring-fg').style.strokeDashoffset = (326.7 * (1 - frac)).toFixed(1);
+  $('#ring-n').textContent = fmtNum(todayWords);
+  $('#ring-of').textContent = `of ${fmtNum(goal)} words`;
+  $('#td-streak').textContent = streakNow();
+  const s = progressSummary();
+  $('#td-pct').textContent = (s.totalCh ? Math.round(s.doneCh/s.totalCh*1000)/10 : 0) + '%';
+
+  renderPlanCard();
+}
+
+function renderPlanCard(){
+  const el = $('#plan-card');
+  const pi = planInfo();
+  if(!pi){
+    el.innerHTML = `<h2>Reading plan</h2>
+      <div class="row">
+        <select id="plan-sel" style="flex:1; min-width:200px">${PLANS.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select>
+        <button class="btn" id="plan-start">Start plan</button>
+      </div>
+      <p class="muted" style="font-size:12.5px; margin:10px 0 0">Pick a plan and Today will tell you exactly what to type, and whether you're on track.</p>`;
+    $('#plan-start').onclick = ()=>{
+      DB.plan = { id: $('#plan-sel').value, start: dayKey() }; DB.planTs = Date.now(); syncSoon();
+      flushDB(); renderToday(); toast('Plan started');
+    };
+    return;
+  }
+  const complete = pi.total > 0 && pi.doneCount >= pi.total;
+  let status;
+  if(!pi.total) status = 'No matching books in this version.';
+  else if(complete) status = 'Plan complete 🎉';
+  else if(!pi.pending.length) status = `<span style="color:var(--good)">On track ✓</span>${pi.ahead ? ` · ${pi.ahead} chapter${pi.ahead===1?'':'s'} ahead` : ''}`;
+  else if(pi.overdue.length) status = `<span style="color:var(--warn)">${pi.overdue.length} chapter${pi.overdue.length===1?'':'s'} behind</span>`;
+  else status = `${pi.pending.length} chapter${pi.pending.length===1?'':'s'} to go today`;
+
+  const pct = pi.total ? pi.doneCount/pi.total*100 : 0;
+  el.innerHTML = `
+    <div class="row"><h2 style="margin:0">${esc(pi.def.name)}</h2><div class="spacer"></div>
+      <button class="btn ghost" id="plan-stop">Stop</button></div>
+    <div class="plan-line">Day ${Math.min(pi.idx+1, pi.def.days)} of ${pi.def.days} · ${status}</div>
+    <div class="bar"><i style="width:${pct.toFixed(1)}%"></i></div>
+    ${pi.todayItems.length ? `<div style="margin-top:12px"><div class="muted" style="font-size:11px; text-transform:uppercase; letter-spacing:.7px; margin-bottom:6px">Today</div>${chipsFor(pi.todayItems)}</div>` : ''}
+    ${pi.overdue.length ? `<div style="margin-top:8px"><div class="muted" style="font-size:11px; text-transform:uppercase; letter-spacing:.7px; margin-bottom:6px">Catch-up</div>${chipsFor(pi.overdue)}</div>` : ''}
+    <div class="muted" style="font-size:12px; margin-top:10px">${pi.doneCount}/${pi.total} chapters · finish by ${pi.finish.toLocaleDateString(undefined,{month:'short', day:'numeric', year:'numeric'})}</div>`;
+  $('#plan-stop').onclick = ()=>{
+    if(!confirm('Stop this reading plan? Your progress stays.')) return;
+    DB.plan = null; DB.planTs = Date.now(); flushDB(); renderToday(); syncSoon();
+  };
+}
+
+/* ---------- Bible map ---------- */
+function renderBibleMap(s){
+  const box = $('#goals-books');
+  if(!s.perBook.length){ box.innerHTML = '<span class="muted">No books.</span>'; return; }
+  box.innerHTML = `<div class="bmap">${s.perBook.map(b=>{
+    const p = b.total ? b.done/b.total*100 : 0;
+    const full = b.total && b.done === b.total;
+    return `<button class="bt${full?' full':''}${b.bi===DB.cur.b?' cur':''}" data-bi="${b.bi}" title="${esc(b.name)} — ${b.done}/${b.total} chapters">
+      <i style="height:${p.toFixed(0)}%"></i><span>${esc(abbr(b.name))}</span></button>`;
+  }).join('')}</div>`;
+  box.querySelectorAll('.bt').forEach(el=>{
+    el.onclick = ()=>{ const bi = +el.dataset.bi; goTo(bi, firstUndone(bi)); };
+  });
+}
+
+/* ---------- Year heatmap ---------- */
+function renderHeatmap(){
+  const el = $('#hm'); if(!el) return;
+  const perDay = {}, comp = {};
+  DB.sessions.forEach(s=>{ const k = dayKey(new Date(s.ts)); perDay[k] = (perDay[k]||0) + s.words; });
+  DB.completions.forEach(c=>{ const k = dayKey(new Date(c.ts)); comp[k] = (comp[k]||0) + 1; });
+
+  const today = new Date(); today.setHours(12,0,0,0);
+  const todayK = dayKey(today);
+  const cur = new Date(today);
+  cur.setDate(cur.getDate() - 364);
+  cur.setDate(cur.getDate() - cur.getDay());       // back to a Sunday
+  const goal = DB.settings.dailyWords || 500;
+  let html = '', activeDays = 0, totalWords = 0, lastMonth = -1;
+
+  while(cur <= today){
+    const m = cur.getMonth();
+    const label = m !== lastMonth ? cur.toLocaleDateString(undefined,{month:'short'}) : '';
+    lastMonth = m;
+    html += `<div class="wk"><span class="hml">${label}</span>`;
+    for(let d=0; d<7; d++){
+      if(cur > today){ html += '<i class="hmc off"></i>'; cur.setDate(cur.getDate()+1); continue; }
+      const k = dayKey(cur), w = perDay[k] || 0, c = comp[k] || 0;
+      let lvl = 0;
+      if(w || c){
+        lvl = w >= goal ? 4 : w >= goal*.5 ? 3 : w >= goal*.25 ? 2 : 1;
+        activeDays++; totalWords += w;
+      }
+      html += `<i class="hmc l${lvl}${k===todayK?' td':''}" data-k="${k}" title="${k}: ${fmtNum(w)} words${c?`, ${c} chapter${c>1?'s':''} completed`:''}"></i>`;
+      cur.setDate(cur.getDate()+1);
+    }
+    html += '</div>';
+  }
+  el.innerHTML = html;
+  el.scrollLeft = el.scrollWidth;
+  $('#hm-sub').textContent = `${activeDays} active day${activeDays===1?'':'s'} · ${fmtNum(totalWords)} words`;
+  el.onclick = e => {
+    const k = e.target.dataset && e.target.dataset.k;
+    if(!k) return;
+    DB.selectedDay = k; DB.calMonth = k.slice(0,7);
+    renderCalendar();
+  };
+}
+
+/* ---------- Ghost caret ---------- */
+function ghostPace(){
+  const best = progOf(DB.cur.b, DB.cur.c)?.bestWpm;
+  if(best) return best;
+  const recent = DB.sessions.slice(-20);
+  return recent.length ? Math.round(recent.reduce((a,x)=>a+x.wpm,0)/recent.length) : 0;
+}
+function updateGhost(){
+  if(TYP.ghostIdx >= 0 && TYP.spans[TYP.ghostIdx]) TYP.spans[TYP.ghostIdx].classList.remove('ghost');
+  TYP.ghostIdx = -1;
+  const info = $('#ghost-info');
+  if(info) info.textContent = (DB.settings.ghost && TYP.ghostWpm) ? `Ghost pace: ${TYP.ghostWpm} WPM` : '';
+  if(!DB.settings.ghost || !TYP.started || TYP.finished || !TYP.ghostWpm) return;
+  const idx = TYP.startI + Math.floor(TYP.ghostWpm * 5 * activeNow() / 60000);
+  if(idx < TYP.text.length && TYP.spans[idx]){
+    TYP.ghostIdx = idx;
+    TYP.spans[idx].classList.add('ghost');
+  }
+}
+
+/* ---------- Focus mode ---------- */
+let _focusT = null;
+function focusTouch(){
+  if(!DB.settings.focus) return;
+  document.body.classList.add('focusing');
+  clearTimeout(_focusT);
+  _focusT = setTimeout(unfocus, 2500);
+}
+function unfocus(){
+  clearTimeout(_focusT);
+  document.body.classList.remove('focusing');
+}
+
+/* ---------- Themes & fonts ---------- */
+const FONTS = {
+  mono:  'ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace',
+  serif: '"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif',
+  sans:  'ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif'
+};
+function applyPrefs(){
+  const st = DB.settings;
+  document.documentElement.dataset.theme = st.theme || 'dark';
+  document.documentElement.style.setProperty('--tf', FONTS[st.font] || FONTS.mono);
+  const fb = $('#btn-focus'); if(fb) fb.classList.toggle('on', !!st.focus);
+  document.documentElement.dataset.verses = st.verses === false ? 'off' : 'on';
+  const sb = $('#btn-sound'); if(sb) sb.classList.toggle('on', !!st.sound);
+  const sv = $('#sel-verses'); if(sv) sv.value = st.verses === false ? '0' : '1';
+}
+function cycle(list, cur){ return list[(list.indexOf(cur) + 1) % list.length]; }
+function bindExtras2(){
+  applyPrefs();
+  bindExtras3();
+  $('#btn-focus').onclick = ()=>{
+    DB.settings.focus = !DB.settings.focus; flushDB(); applyPrefs();
+    if(!DB.settings.focus) unfocus();
+    toast('Focus mode ' + (DB.settings.focus ? 'on' : 'off'));
+  };
+  $('#btn-font').onclick = ()=>{
+    DB.settings.font = cycle(['mono','serif','sans'], DB.settings.font); flushDB(); applyPrefs();
+    toast('Reading font: ' + DB.settings.font);
+  };
+  $('#btn-theme').onclick = ()=>{
+    DB.settings.theme = cycle(['dark','light','sepia'], DB.settings.theme); flushDB(); applyPrefs();
+    toast('Theme: ' + DB.settings.theme);
+  };
+  const sg = $('#sel-ghost');
+  sg.value = DB.settings.ghost ? '1' : '0';
+  sg.onchange = e => {
+    DB.settings.ghost = e.target.value === '1'; flushDB(); updateGhost();
+    e.target.blur(); focusTyping();
+  };
+  document.addEventListener('mousemove', e=>{
+    if(Math.abs(e.movementX||0) + Math.abs(e.movementY||0) > 4) unfocus();
+  });
+}
+
+
+/* =========================================================
+   v4 — backup reminder, touch typing, milestones, sounds
+   ========================================================= */
+
+/* ---------- backup ---------- */
+async function exportBackup(){
+  DB.lastBackup = Date.now(); flushDB();
+  const dump = { state: DB, bibles: {} };
+  for(const v of DB.versions){
+    const b = await loadBible(v.id);
+    if(b) dump.bibles[v.id] = b;
+  }
+  const blob = new Blob([JSON.stringify(dump)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `bible-typing-backup-${dayKey()}.json`;
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+  updateBackupInfo();
+  toast('Backup downloaded');
+}
+function updateBackupInfo(){
+  const el = $('#backup-info'); if(!el) return;
+  el.textContent = DB.lastBackup ? 'Last backup: ' + new Date(DB.lastBackup).toLocaleDateString() : 'Never backed up';
+}
+function renderBackupNote(){
+  const el = $('#backup-note'); if(!el) return;
+  const hasData = DB.completions.length > 0 || DB.sessions.length > 0;
+  const last = DB.lastBackup || DB.createdAt || Date.now();
+  const days = Math.floor((Date.now() - last) / 86400000);
+  if(!hasData || days < 7 || Date.now() < DB.backupSnooze){ el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+  el.innerHTML = `<div class="row">
+    <div><b>Back up your progress</b>
+      <div class="muted" style="font-size:12.5px">${DB.lastBackup ? `Last backup was ${days} days ago.` : 'You have never made a backup.'} Your data lives only in this browser.</div></div>
+    <div class="spacer"></div>
+    <button class="btn ghost" id="bk-later">Later</button>
+    <button class="btn" id="bk-now">Download backup</button></div>`;
+  $('#bk-now').onclick = async ()=>{ await exportBackup(); renderBackupNote(); };
+  $('#bk-later').onclick = ()=>{ DB.backupSnooze = Date.now() + 3*86400000; flushDB(); renderBackupNote(); };
+}
+
+/* ---------- milestones (quiet, once each) ---------- */
+const CH_MARKS = [1,10,25,50,100,250,500,1000];
+const STREAK_MARKS = [3,7,14,30,60,100,365];
+function checkMilestones(){
+  const out = [], M = DB.milestones, now = Date.now();
+  const mark = id => { if(M[id]) return false; M[id] = now; return true; };
+  const bk = currentBook();
+  if(bk && bk.chapters.every((_,ci)=>progOf(DB.cur.b, ci)?.done) && mark('book:' + bookId(bk.name)))
+    out.push(`📖 Finished ${bk.name}`);
+  if(ACTIVE && ACTIVE.books.every((b,bi)=>b.chapters.every((_,ci)=>progOf(bi, ci)?.done)) && mark('all:' + ACTIVE.id))
+    out.push(`🏆 Every chapter of ${ACTIVE.name} is done`);
+  const n = Object.keys(DB.canon).length;
+  let hit = null;
+  CH_MARKS.forEach(m=>{ if(n >= m && mark('ch:' + m)) hit = m; });
+  if(hit) out.push(hit === 1 ? '✨ First chapter complete' : `✨ ${hit} chapters complete`);
+  const st = streakNow();
+  hit = null;
+  STREAK_MARKS.forEach(m=>{ if(st >= m && mark('streak:' + m)) hit = m; });
+  if(hit) out.push(`🔥 ${hit}-day streak`);
+  const pi = planInfo();
+  if(pi && pi.total && pi.doneCount >= pi.total && mark(`plan:${pi.def.id}:${DB.plan.start}`))
+    out.push(`🎉 Plan complete: ${pi.def.name}`);
+  return out;
+}
+
+/* ---------- sounds (off by default) ---------- */
+let _ac = null;
+function sfx(kind){
+  if(!DB.settings.sound) return;
+  try{
+    _ac = _ac || new (window.AudioContext || window.webkitAudioContext)();
+    if(_ac.state === 'suspended') _ac.resume();
+    const t = _ac.currentTime;
+    const tone = (f, dur, vol, type, at=0)=>{
+      const o = _ac.createOscillator(), g = _ac.createGain();
+      o.type = type; o.frequency.setValueAtTime(f, t+at);
+      g.gain.setValueAtTime(vol, t+at);
+      g.gain.exponentialRampToValueAtTime(0.0001, t+at+dur);
+      o.connect(g); g.connect(_ac.destination);
+      o.start(t+at); o.stop(t+at+dur+0.02);
+    };
+    if(kind === 'key') tone(1400 + Math.random()*250, .035, .025, 'triangle');
+    else if(kind === 'err') tone(170, .12, .05, 'sine');
+    else if(kind === 'done'){ tone(660, .35, .05, 'sine'); tone(990, .5, .04, 'sine', .12); }
+  }catch(e){}
+}
+
+/* ---------- touch typing ---------- */
+const COARSE = !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
+const SENT = '\u200b';
+let mobPrev = SENT, mobStack = [];
+function mobReset(){
+  const el = $('#mobile-input'); if(!el) return;
+  el.value = SENT; mobPrev = SENT; mobStack = [];
+  try{ el.setSelectionRange(1,1); }catch(e){}
+}
+function focusTyping(){
+  if(!$('#view-type').classList.contains('active')) return;
+  if(COARSE){
+    const el = $('#mobile-input');
+    if(!el.value) mobReset();
+    el.focus({preventScroll:true});
+  } else {
+    $('#type-panel').focus();
+  }
+}
+/* The hidden input is a buffer: we diff it against the last snapshot so predictive keyboards,
+   backspace and fast typing all work. Wrong characters never advance, so deleting one must not
+   move the cursor back - mobStack remembers which buffered characters actually advanced. */
+function onMobileInput(e){
+  const el = e.target, v = el.value;
+  if(!v.startsWith(SENT)){ backspace(); mobReset(); return; }   // deleted past the buffer start
+  let p = 0;
+  while(p < v.length && p < mobPrev.length && v[p] === mobPrev[p]) p++;
+  for(let i = mobPrev.length; i > p; i--){ if(mobStack.pop()) backspace(); }
+  for(const ch of v.slice(p)){
+    const before = TYP.i;
+    typeChar(ch);
+    mobStack.push(TYP.i > before || TYP.finished);
+  }
+  mobPrev = v;
+  if(!e.isComposing && v.length > 14) mobReset();
+}
+
+let _installEv = null;
+window.addEventListener('beforeinstallprompt', e=>{
+  e.preventDefault(); _installEv = e;
+  const b = $('#btn-install'); if(b) b.classList.remove('hidden');
+});
+
+function bindExtras3(){
+  bindSync();
+  $('#btn-export').onclick = exportBackup;
+
+  $('#btn-sound').onclick = ()=>{
+    DB.settings.sound = !DB.settings.sound; flushDB(); applyPrefs();
+    toast('Typing sounds ' + (DB.settings.sound ? 'on' : 'off'));
+    if(DB.settings.sound) sfx('key');
+  };
+  $('#sel-verses').onchange = e => {
+    DB.settings.verses = e.target.value === '1'; flushDB(); applyPrefs();
+    e.target.blur(); focusTyping();
+  };
+
+  const mi = $('#mobile-input');
+  mobReset();
+  mi.addEventListener('input', onMobileInput);
+  $('#type-panel').addEventListener('click', ()=>{ if(COARSE) focusTyping(); });
+  $('#btn-skip').onclick = ()=>{ skipChar(); focusTyping(); };
+
+  $('#btn-install').onclick = async ()=>{
+    if(!_installEv) return;
+    _installEv.prompt();
+    try{ await _installEv.userChoice; }catch(e){}
+    _installEv = null; $('#btn-install').classList.add('hidden');
+  };
+  if(_installEv) $('#btn-install').classList.remove('hidden');
+}
+
+
+/* =========================================================
+   v5 — GitHub Gist sync
+   Progress travels through ONE private gist. Every device pulls, merges (union — nothing is
+   ever overwritten), then pushes. The token stays in this browser only and is never exported.
+   ========================================================= */
+const SYNC_KEY = 'btt.sync.v1';
+const GIST_DESC = 'Bible Typing Trainer sync (private — please do not delete)';
+const GIST_FILE = 'bible-typing-sync.json';
+let SYNC = (()=>{ try{ return JSON.parse(localStorage.getItem(SYNC_KEY) || 'null'); }catch(e){ return null; } })();
+function saveSync(){ if(SYNC) localStorage.setItem(SYNC_KEY, JSON.stringify(SYNC)); else localStorage.removeItem(SYNC_KEY); }
+
+async function gh(path, opts={}){
+  const res = await fetch('https://api.github.com' + path, {
+    cache: 'no-store', ...opts,
+    headers: { Authorization: 'Bearer ' + SYNC.token, Accept: 'application/vnd.github+json',
+               ...(opts.body ? {'Content-Type':'application/json'} : {}) }
+  });
+  if(res.status === 401) throw new Error('GitHub rejected the token (expired or revoked). Disconnect and connect again with a new one.');
+  if(res.status === 403 || res.status === 429) throw new Error('GitHub refused the request (HTTP ' + res.status + '): rate limit, or the token lacks the "gist" permission.');
+  if(res.status === 404) throw new Error('GitHub says not found — the token probably lacks the "gist" permission. Use a classic token with only "gist" ticked.');
+  if(!res.ok) throw new Error('GitHub error (HTTP ' + res.status + ')');
+  return res;
+}
+async function findGist(){
+  for(let page=1; page<=10; page++){
+    const list = await (await gh(`/gists?per_page=100&page=${page}`)).json();
+    const g = list.find(x => x.files && x.files[GIST_FILE]);
+    if(g) return g;
+    if(list.length < 100) break;
+  }
+  return null;
+}
+async function readGist(id){
+  const g = await (await gh('/gists/' + id)).json();
+  const f = g.files && g.files[GIST_FILE];
+  if(!f) return null;
+  let text = f.content;
+  if(f.truncated || text == null) text = await (await fetch(f.raw_url, {cache:'no-store'})).text();
+  return JSON.parse(text);
+}
+async function writeGist(payload){
+  const files = { [GIST_FILE]: { content: JSON.stringify(payload) } };
+  if(!SYNC.gistId){
+    const g = await (await gh('/gists', { method:'POST', body: JSON.stringify({ description: GIST_DESC, public:false, files }) })).json();
+    SYNC.gistId = g.id; saveSync();
+  } else {
+    await gh('/gists/' + SYNC.gistId, { method:'PATCH', body: JSON.stringify({ description: GIST_DESC, files }) });
+  }
+}
+
+/* ----- what gets synced ----- */
+const _byTs = (a,b)=> (a.ts-b.ts) || (JSON.stringify(a) < JSON.stringify(b) ? -1 : 1);
+const _sortKeys = o => Object.fromEntries(Object.keys(o).sort().map(k=>[k, o[k]]));
+function buildSyncPayload(){
+  const partial = {};
+  Object.keys(DB.partial).sort().forEach(k=>{
+    const [vid,b,c] = k.split('::');
+    const v = DB.versions.find(x=>x.id === vid);
+    if(!v) return;                                    // version ids differ per device → use the name
+    partial[`${v.name}::${b}::${c}`] = { i: DB.partial[k], ts: DB.partialTs[k] || 1 };
+  });
+  return {
+    schema: 1,
+    canon: _sortKeys(DB.canon),
+    completions: DB.completions.slice().sort(_byTs),
+    sessions: DB.sessions.slice().sort(_byTs),
+    milestones: _sortKeys(DB.milestones),
+    partial,
+    plan: DB.plan || null, planTs: DB.planTs || 0,
+    historyClearedAt: DB.historyClearedAt || 0,
+    versions: DB.versions.filter(v=>v.url).map(v=>({ name:v.name, url:v.url }))
+  };
+}
+function mergeRemote(r){
+  // history clears win over older sessions
+  const cleared = Math.max(DB.historyClearedAt || 0, r.historyClearedAt || 0);
+  DB.historyClearedAt = cleared;
+
+  // completed chapters: newest record wins, best WPM is kept
+  for(const [k, rec] of Object.entries(r.canon || {})){
+    const l = DB.canon[k];
+    if(!l){ DB.canon[k] = rec; continue; }
+    const w = (rec.ts||0) > (l.ts||0) ? rec : l;
+    DB.canon[k] = { ...w, bestWpm: Math.max(rec.bestWpm||0, l.bestWpm||0) };
+  }
+  // sessions & completions: union, de-duplicated
+  const union = (local, remote, keyFn, cap, minTs=0) => {
+    const m = new Map();
+    local.concat(remote || []).forEach(x=>{ if(x && x.ts > minTs) m.set(keyFn(x), x); });
+    const out = [...m.values()].sort(_byTs);
+    return out.length > cap ? out.slice(-cap) : out;
+  };
+  DB.sessions = union(DB.sessions, r.sessions, x=>`${x.ts}|${x.wpm}|${x.words}`, 5000, cleared);
+  DB.completions = union(DB.completions, r.completions, x=>`${x.ts}|${x.book}|${x.chap}`, 20000);
+  // milestones: union
+  for(const [k, t] of Object.entries(r.milestones || {})){
+    if(!DB.milestones[k] || t < DB.milestones[k]) DB.milestones[k] = t;
+  }
+  // plan: newest change wins
+  if((r.planTs || 0) > (DB.planTs || 0)){ DB.plan = r.plan || null; DB.planTs = r.planTs; }
+  // resume positions: newest wins (never disturb the chapter being typed right now)
+  for(const [rk, rp] of Object.entries(r.partial || {})){
+    const parts = rk.split('::'); const c = parts.pop(), b = parts.pop(), name = parts.join('::');
+    const v = DB.versions.find(x=>x.name === name);
+    if(!v) continue;
+    const lk = `${v.id}::${b}::${c}`;
+    if(TYP.started && !TYP.finished && lk === progKey(DB.cur.b, DB.cur.c)) continue;
+    if((rp.ts || 0) > (DB.partialTs[lk] || 0)){ DB.partial[lk] = rp.i; DB.partialTs[lk] = rp.ts; }
+  }
+}
+
+/* Versions imported from a URL on another device are fetched here automatically. */
+async function importRemoteVersions(list){
+  let did = false;
+  for(const rv of list){
+    if(!rv.url || DB.versions.some(v=>v.name === rv.name)) continue;
+    try{
+      setSyncMsg(`Downloading ${rv.name}…`);
+      const res = await fetch(rv.url);
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      const parsed = parseImport(await res.text());
+      const meta = await addVersion({ name: rv.name, books: parsed.books });
+      meta.url = rv.url; flushDB();
+      const cur = DB.versions.find(v=>v.id === DB.activeId);
+      if(!cur || cur.builtin) await setActiveVersion(meta.id);
+      did = true;
+    }catch(err){ console.warn('auto-import failed', err); setSyncMsg(`Could not download ${rv.name}: ${err.message}`); }
+  }
+  return did;
+}
+
+/* ----- orchestration ----- */
+let _syncing = false, _syncAgain = false, _syncT = null;
+function syncSoon(){
+  if(!SYNC) return;
+  clearTimeout(_syncT);
+  _syncT = setTimeout(()=>syncNow(), 4000);
+}
+async function syncNow({quiet=true}={}){
+  if(!SYNC) return false;
+  if(_syncing){ _syncAgain = true; return false; }
+  _syncing = true; setSyncState('busy');
+  try{
+    if(!SYNC.gistId){ const g = await findGist(); if(g){ SYNC.gistId = g.id; saveSync(); } }
+    const remote = SYNC.gistId ? await readGist(SYNC.gistId) : null;
+    if(remote){
+      mergeRemote(remote);
+      if(await importRemoteVersions(remote.versions || [])) mergeRemote(remote);
+    }
+    flushDB();
+    const payload = buildSyncPayload();
+    if(!remote || JSON.stringify(payload) !== JSON.stringify(remote)) await writeGist(payload);
+    SYNC.lastSync = Date.now(); SYNC.lastError = null; saveSync();
+    setSyncState('ok');
+    renderAll(); updateSyncUI();
+    if(!quiet) toast('Synced ✓');
+    return true;
+  }catch(err){
+    console.warn('sync failed', err);
+    SYNC.lastError = err.message; saveSync();
+    setSyncState('err', err.message); updateSyncUI();
+    if(!quiet) toast('Sync failed: ' + err.message);
+    return false;
+  }finally{
+    _syncing = false;
+    if(_syncAgain){ _syncAgain = false; syncSoon(); }
+  }
+}
+
+/* ----- UI ----- */
+function setSyncMsg(t){ const el = $('#sync-msg'); if(el) el.textContent = t; }
+function setSyncState(state, msg){
+  const b = $('#btn-sync'); if(!b) return;
+  if(!SYNC){ b.classList.add('hidden'); return; }
+  b.classList.remove('hidden', 'sync-ok', 'sync-err', 'sync-busy');
+  if(state === 'ok') b.classList.add('sync-ok');
+  if(state === 'err') b.classList.add('sync-err');
+  if(state === 'busy') b.classList.add('sync-busy');
+  b.title = state === 'ok' ? 'Synced — click to sync now'
+          : state === 'busy' ? 'Syncing…'
+          : state === 'err' ? 'Sync problem: ' + (msg || '') : 'Sync';
+}
+function updateSyncUI(){
+  const box = $('#sync-body'); if(!box) return;
+  if(!SYNC){
+    box.innerHTML = `
+      <p class="muted" style="font-size:13px; margin:0 0 4px">Keep your progress on every laptop, desktop and iPad. One-time setup per device (about 30 seconds):</p>
+      <ol>
+        <li><a href="https://github.com/settings/tokens/new?scopes=gist&description=Bible%20Typing%20Trainer%20sync" target="_blank" rel="noopener">Create a token on GitHub</a> — only <b>gist</b> is ticked; choose "No expiration"; copy it.</li>
+        <li>Paste it here and press Connect.</li>
+      </ol>
+      <div class="row">
+        <input type="password" id="sync-token" placeholder="ghp_…" autocomplete="off" style="flex:1; min-width:220px">
+        <button class="btn" id="sync-connect">Connect</button>
+      </div>
+      <div id="sync-msg" class="status"></div>`;
+    $('#sync-connect').onclick = syncConnect;
+    return;
+  }
+  const last = SYNC.lastSync ? new Date(SYNC.lastSync).toLocaleString() : 'not yet';
+  box.innerHTML = `
+    <div style="font-size:14px">✓ Connected as <b>${esc(SYNC.login || 'GitHub user')}</b> · last sync ${esc(last)}</div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn" id="sync-now">Sync now</button>
+      ${SYNC.gistId ? `<a class="btn ghost" style="text-decoration:none" target="_blank" rel="noopener" href="https://gist.github.com/${encodeURIComponent(SYNC.login||'')}/${encodeURIComponent(SYNC.gistId)}">View gist</a>` : ''}
+      <button class="btn ghost danger" id="sync-off">Disconnect this device</button>
+    </div>
+    <div id="sync-msg" class="status" style="${SYNC.lastError ? 'color:var(--bad)' : ''}">${esc(SYNC.lastError || '')}</div>
+    <p class="muted" style="font-size:12px; margin:8px 0 0">Synced: completed chapters, calendar &amp; history, reading plan, resume position, milestones, and URL-imported Bibles. Not synced: theme/font, and the Analysis counters.</p>`;
+  $('#sync-now').onclick = ()=> syncNow({quiet:false});
+  $('#sync-off').onclick = ()=>{
+    if(!confirm('Disconnect this device from sync? Your progress here stays; the gist on GitHub is untouched.')) return;
+    SYNC = null; saveSync(); setSyncState(null); updateSyncUI(); toast('Sync disconnected');
+  };
+}
+async function syncConnect(){
+  const token = ($('#sync-token').value || '').trim();
+  if(!token){ setSyncMsg('Paste your token first.'); return; }
+  setSyncMsg('Checking token…');
+  SYNC = { token };
+  try{
+    const res = await gh('/user');
+    const scopes = res.headers.get('x-oauth-scopes');
+    if(scopes !== null && !/\bgist\b/.test(scopes)) throw new Error('This token has no "gist" permission. Create a classic token with "gist" ticked.');
+    SYNC.login = (await res.json()).login;
+    saveSync();
+    setSyncMsg('Syncing…');
+    const ok = await syncNow({quiet:false});
+    updateSyncUI();
+    if(ok) toast('Connected — progress will follow you everywhere');
+  }catch(err){
+    SYNC = null; saveSync(); setSyncState(null);
+    setSyncMsg(err.message);
+  }
+}
+function bindSync(){
+  updateSyncUI();
+  setSyncState(SYNC ? 'idle' : null);
+  $('#btn-sync').onclick = ()=> syncNow({quiet:false});
+  document.addEventListener('visibilitychange', ()=>{
+    if(!SYNC) return;
+    if(document.visibilityState === 'hidden'){ try{ savePartial(); }catch(e){} flushDB(); syncNow(); }
+    else if(Date.now() - (SYNC.lastSync || 0) > 45000) syncNow();
+  });
+  window.addEventListener('online', ()=>{ if(SYNC) syncNow(); });
+  if(SYNC) setTimeout(()=>syncNow(), 400);
+}
+
+function shiftMonth(delta){
+  const [Y,M] = (DB.calMonth || `${new Date().getFullYear()}-${pad2(new Date().getMonth()+1)}`).split('-').map(Number);
+  const d = new Date(Y, M-1+delta, 1);
+  DB.calMonth = `${d.getFullYear()}-${pad2(d.getMonth()+1)}`;
+  flushDB();
+  renderCalendar();
+}
+
+function deadKeyChar(e){
+  // Dead keys (US-International etc.) report key="Dead"; recover the intended symbol from the physical key.
+  switch(e.code){
+    case 'Quote':     return e.shiftKey ? '"' : "'";
+    case 'Backquote': return e.shiftKey ? '~' : '`';
+    case 'Digit6':    return e.shiftKey ? '^' : null;
+    default: return null;
+  }
+}
+
+function onKeyDown(e){
+  if(!$('#view-type').classList.contains('active')) return;
+  const ae = document.activeElement;
+  if(ae && ae.id !== 'mobile-input' && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
+
+  if(e.getModifierState){
+    $('#caps-warn').classList.toggle('hidden', !e.getModifierState('CapsLock'));
+  }
+  const altGr = e.getModifierState && e.getModifierState('AltGraph');
+  if((e.ctrlKey || e.metaKey || e.altKey) && !altGr) return;
+
+  if(TYP.finished){
+    if(e.key === 'Enter'){ e.preventDefault(); $('#btn-next').click(); }
+    else if(e.key === 'Escape'){ e.preventDefault(); $('#done-overlay').classList.add('hidden'); }
+    return;
+  }
+
+  if(e.key === 'Backspace'){ e.preventDefault(); backspace(); return; }
+  if(e.key === 'Tab'){ e.preventDefault(); skipChar(); return; }
+  if(e.key === 'Escape'){ e.preventDefault(); return; }
+  if(e.key === 'Enter'){ e.preventDefault(); typeChar('\n'); return; }
+
+  let k = e.key;
+  if(k === 'Dead'){
+    k = deadKeyChar(e);
+    if(!k) return;
+  }
+  if(k && k.length === 1){
+    e.preventDefault();
+    typeChar(k);
+  }
+}
+
+function switchView(name){
+  unfocus();
+  $$('#tabs button').forEach(b=>b.classList.toggle('active', b.dataset.view===name));
+  $$('.view').forEach(v=>v.classList.toggle('active', v.id === 'view-'+name));
+  if(name==='today') renderToday();
+  if(name==='goals') renderGoals();
+  if(name==='history') renderHistory();
+  if(name==='calendar') renderCalendar();
+  if(name==='analysis') renderAnalysis();
+  if(name==='library') renderLibrary();
+  if(name==='type'){ renderTypeSelectors(); renderLiveStats(); }
+}
+
+/* =========================================================
+   BOOT
+   ========================================================= */
+(async function boot(){
+  loadDB();
+  applyPrefs();
+
+  // Prune once at startup in case a previous session has bloated stats.
+  pruneStats();
+
+  // seed with the built-in sample the first time
+  if(!DB.versions.length){
+    try{
+      const meta = await addVersion({ name: SAMPLE.name, books: SAMPLE.books }, {builtin:true});
+      DB.activeId = meta.id;
+      flushDB();
+    }catch(e){ console.warn(e); }
+  }
+
+  await migrateCanon();
+  await backfillCompletions();
+  await setActiveVersion(DB.activeId || DB.versions[0]?.id);
+  bindUI();
+  bindExtras();
+  renderAll();
+  switchView('today');
+
+  try{ navigator.storage?.persist?.(); }catch(e){}
+  if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+  // keep progress numbers fresh while typing
+  setInterval(()=>{
+    if(TYP.started && !TYP.finished) renderLiveStats();
+  }, 250);
+
+  setTimeout(()=>focusTyping(), 200);
+})();
+</script>
+</body>
+</html>
